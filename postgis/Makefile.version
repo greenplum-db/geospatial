@@ -1,29 +1,34 @@
-# -------------------
-# version lists
-# ------------------
+# -----------------------------------------
+# current version of postgis to compile
+# -----------------------------------------
 
-#GEOS
+POSTGIS_VER	= 2.1.5
+
+# -----------------------------------------
+# remaining are used for enterprise build
+# -----------------------------------------
+
+# GEOS
 GEOS_VER = 3.4.2
 GEOS_REL = 1
 
-#PROJ.4
+# PROJ.4
 PROJ_VER = 4.8.0
 PROJ_REL = 1
 
-#JSON-C
+# JSON-C
 JSON_VER = 0.12
 JSON_REL = 1
 
-#GDAL
+# GDAL
 GDAL_VER = 1.11.1
 GDAL_REL = 1
 
-#LIBEXPAT
+# LIBEXPAT
 LIBEXPAT_VER = 2.1.0
 LIBEXPAT_REL = 1
 
-#POSTGIS
-POSTGIS_VER	= 2.1.5
+# GPDB gppkg
 PIVOTAL_VER	= 2.1
 GPDB_VER	= 5.0
 POSTGIS_REL	= 1

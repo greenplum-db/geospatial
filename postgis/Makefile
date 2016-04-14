@@ -21,13 +21,16 @@ all install uninstall clean distclean maintainer-clean test check installcheck d
 			false ; \
 		else \
 		 	cd $(POSTGIS_BLD_DIR) && $(POSTGIS_BLD_DIR)/configure \
-				--without-raster \
+				--with-raster \
 				--without-topology \
 				--with-pgconfig=$$GPHOME/bin/pg_config \
 				--prefix=$$GPHOME; \
 		fi; \
 	fi
-	@echo "You click $@."
+	@echo "PostGIS source-code is ready in $(POSTGIS_BLD_DIR)."
+	@echo "Will compile it with: make $@."
+	@echo "-----------------------------------------------------------------------"
+	@echo
 	make -C $(POSTGIS_BLD_DIR) $@
 
 # prepare the compiling dir
