@@ -13628,3 +13628,36 @@ index 65b580d..70bcdc6 100644
  CREATE OR REPLACE FUNCTION _overview_constraint_info(
  	ovschema name, ovtable name, ovcolumn name,
  	OUT refschema name, OUT reftable name, OUT refcolumn name, OUT factor integer
+diff --git a/postgis/build/postgis-2.1.5/raster/Makefile.in b/postgis/build/postgis-2.1.5/raster/Makefile.in
+index 86df62a..70a3d24 100644
+--- a/postgis/build/postgis-2.1.5/raster/Makefile.in
++++ b/postgis/build/postgis-2.1.5/raster/Makefile.in
+@@ -41,11 +41,13 @@ install: all
+ 	$(MAKE) -C rt_pg install
+ 	$(MAKE) -C loader install
+ 	$(MAKE) -C scripts install
++	$(MAKE) raster_config
+ 
+ uninstall:
+ 	$(MAKE) -C rt_pg uninstall
+ 	$(MAKE) -C loader uninstall
+ 	$(MAKE) -C scripts uninstall
++	$(MAKE) raster_rm_config
+ 
+ clean:
+ 	$(MAKE) -C rt_core $@
+@@ -67,3 +69,14 @@ core-check:
+ 
+ check:
+ 	$(MAKE) -C test $@
++
++raster_config: raster_rm_config
++	echo "export POSTGIS_ENABLE_OUTDB_RASTERS=0" >> $$GPHOME/greenplum_path.sh
++	echo "export POSTGIS_GDAL_ENABLED_DRIVERS=DISABLE_ALL" >> $$GPHOME/greenplum_path.sh
++	source $$GPHOME/greenplum_path.sh
++
++raster_rm_config:
++	sed -i "s|export POSTGIS_ENABLE_OUTDB_RASTERS=0||g" $$GPHOME/greenplum_path.sh
++	sed -i "s|export POSTGIS_GDAL_ENABLED_DRIVERS=DISABLE_ALL||g" $$GPHOME/greenplum_path.sh
++	sed -i '$${/^$$/d}' $$GPHOME/greenplum_path.sh
++	sed -i '$${/^$$/d}' $$GPHOME/greenplum_path.sh
