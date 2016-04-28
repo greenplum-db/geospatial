@@ -13661,7 +13661,7 @@ index 86df62a..70a3d24 100644
 +	sed -i "s|export POSTGIS_GDAL_ENABLED_DRIVERS=DISABLE_ALL||g" $$GPHOME/greenplum_path.sh
 +	sed -i '$${/^$$/d}' $$GPHOME/greenplum_path.sh
 +	sed -i '$${/^$$/d}' $$GPHOME/greenplum_path.sh
-diff --git a/home/gpadmin/workspace/geospatial/postgis/source/postgis-2.1.5/raster/loader/raster2pgsql.c b/home/gpadmin/workspace/geospatial/postgis/build/postgis-2.1.5-backup/raster/loader/raster2pgsql.c
+diff --git a/postgis/build/postgis-2.1.5/raster/loader/raster2pgsql.c b/postgis/build/postgis-2.1.5/raster/loader/raster2pgsql.c
 index 15828f8..3bf1606 100644
 --- a/postgis/build/postgis-2.1.5/raster/loader/raster2pgsql.c
 +++ b/postgis/build/postgis-2.1.5/raster/loader/raster2pgsql.c
