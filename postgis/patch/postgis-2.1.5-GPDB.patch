@@ -13628,3 +13628,17 @@ index 65b580d..70bcdc6 100644
  CREATE OR REPLACE FUNCTION _overview_constraint_info(
  	ovschema name, ovtable name, ovcolumn name,
  	OUT refschema name, OUT reftable name, OUT refcolumn name, OUT factor integer
+diff --git a/home/gpadmin/workspace/geospatial/postgis/source/postgis-2.1.5/raster/loader/raster2pgsql.c b/home/gpadmin/workspace/geospatial/postgis/build/postgis-2.1.5-backup/raster/loader/raster2pgsql.c
+index 15828f8..42b3b79 100644
+--- a/postgis/build/postgis-2.1.5/raster/loader/raster2pgsql.c
++++ b/postgis/build/postgis-2.1.5/raster/loader/raster2pgsql.c
+@@ -1075,7 +1075,8 @@ create_index(
+ 		rtdealloc(_column);
+ 		return 0;
+ 	}
+-	sprintf(sql, "CREATE INDEX ON %s%s USING gist (st_convexhull(%s))%s%s;",
++	sprintf(sql, "CREATE INDEX %s_index ON %s%s USING gist (st_convexhull(%s))%s%s;",
++		_table,
+ 		(schema != NULL ? schema : ""),
+ 		table,
+ 		column,
