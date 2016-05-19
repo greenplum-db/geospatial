@@ -21,17 +21,17 @@ cp -rf %{gdal_dir}/share/gdal %{buildroot}/temp/share
 
 %post
 echo "export GDAL_DATA=\$GPHOME/share/gdal" >> $GPHOME/greenplum_path.sh
-echo "export POSTGIS_ENABLE_OUTDB_RASTERS=0" >> $$GPHOME/greenplum_path.sh
-echo "export POSTGIS_GDAL_ENABLED_DRIVERS=DISABLE_ALL" >> $$GPHOME/greenplum_path.sh
+echo "export POSTGIS_ENABLE_OUTDB_RASTERS=0" >> $GPHOME/greenplum_path.sh
+echo "export POSTGIS_GDAL_ENABLED_DRIVERS=DISABLE_ALL" >> $GPHOME/greenplum_path.sh
 
 
 %postun
 sed -i".bk" "s|export GDAL_DATA=\$GPHOME/share/gdal||g" $GPHOME/greenplum_path.sh
-sed -i "s|export POSTGIS_ENABLE_OUTDB_RASTERS=0||g" $$GPHOME/greenplum_path.sh
-sed -i "s|export POSTGIS_GDAL_ENABLED_DRIVERS=DISABLE_ALL||g" $$GPHOME/greenplum_path.sh
-sed -i '$${/^$$/d}' $$GPHOME/greenplum_path.sh
-sed -i '$${/^$$/d}' $$GPHOME/greenplum_path.sh
-sed -i '$${/^$$/d}' $$GPHOME/greenplum_path.sh
+sed -i "s|export POSTGIS_ENABLE_OUTDB_RASTERS=0||g" $GPHOME/greenplum_path.sh
+sed -i "s|export POSTGIS_GDAL_ENABLED_DRIVERS=DISABLE_ALL||g" $GPHOME/greenplum_path.sh
+sed -i '$${/^$$/d}' $GPHOME/greenplum_path.sh
+sed -i '$${/^$$/d}' $GPHOME/greenplum_path.sh
+sed -i '$${/^$$/d}' $GPHOME/greenplum_path.sh
 rm -rf $GPHOME/greenplum_path.sh.bk
 
 %files
