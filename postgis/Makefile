@@ -31,7 +31,7 @@ all install uninstall clean distclean maintainer-clean test check installcheck d
 	@echo "Will compile it with: make $@."
 	@echo "-----------------------------------------------------------------------"
 	@echo
-	make -C $(POSTGIS_BLD_DIR) $@
+	make -C $(POSTGIS_BLD_DIR) $@ USE_PGXS=1
 
 # prepare the compiling dir
 prepare:

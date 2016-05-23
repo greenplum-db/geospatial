@@ -15,15 +15,22 @@
 # the shapefile loader)
 
 MODULE_doc=postgis-@POSTGIS_MAJOR_VERSION@.@POSTGIS_MINOR_VERSION@
+#MODULEDIR=$$GPHOME/share/postgresql/contrib/$(MODULE_doc)
 MODULEDIR=contrib/$(MODULE_doc)
 
 # Files to be copied to the contrib/ directory
 DATA_built=postgis_comments.sql raster_comments.sql topology_comments.sql
 
 # PGXS information
-PG_CONFIG = @PG_CONFIG@ 
+ifdef USE_PGXS
+PG_CONFIG = @PG_CONFIG@
 PGXS := @PGXS@
 include $(PGXS)
+else
+top_builddir= $(shell cd $(BLD_TOP)/.. && pwd)
+include $(top_builddir)/src/Makefile.global
+include $(top_builddir)/contrib/contrib-global.mk
+endif
 
 # PGXS override feature. The ability to allow PostGIS to install itself
 # in a versioned directory is only available in PostgreSQL >= 8.5. To

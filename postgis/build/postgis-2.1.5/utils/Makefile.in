@@ -22,9 +22,15 @@ MODULEDIR=contrib/$(MODULE_doc)
 DATA_built=postgis_restore.pl
 
 # PGXS information
-PG_CONFIG = @PG_CONFIG@ 
+ifdef USE_PGXS
+PG_CONFIG = @PG_CONFIG@
 PGXS := @PGXS@
 include $(PGXS)
+else
+top_builddir= $(shell cd $(BLD_TOP)/.. && pwd)
+include $(top_builddir)/src/Makefile.global
+include $(top_builddir)/contrib/contrib-global.mk
+endif
 
 SHELL = @SHELL@
 INSTALL = $(SHELL) ../install-sh
