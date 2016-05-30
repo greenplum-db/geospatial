@@ -40,15 +40,13 @@ prepare:
 	@echo "Prepare the compiling directory for postgis-$(POSTGIS_VER)."
 	@echo "-----------------------------------------------------------------------"
 	@if [ -d $(POSTGIS_BLD_DIR) ]; then \
-		echo "WARNING: $(POSTGIS_BLD_DIR) already exists."; \
+		echo "NOTICE: $(POSTGIS_BLD_DIR) already exists."; \
 		echo "    It's better to run 'make remove' firstly."; \
 	else \
 		echo "    1. extract $(POSTGIS_TAR_BALL) to $(POSTGIS_BLD_DIR) ..."; \
 		tar -zxf $(POSTGIS_TAR_BALL) -C $(POSTGIS_BLD_TOP); \
 		echo "    2. patch it with $(POSTGIS_PATCH_FILE) ..."; \
 		patch -d $(POSTGIS_BLD_DIR) -p 4 --silent < $(POSTGIS_PATCH_FILE); \
-		echo "    3. copy README.libs to $(POSTGIS_BLD_DIR)"; \
-		cp -u README.libs $(POSTGIS_BLD_DIR); \
 		echo "-----------------------------------------------------------------------"; \
 		echo "Done"; \
 		echo "-----------------------------------------------------------------------"; \

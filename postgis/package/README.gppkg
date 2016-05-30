@@ -4,12 +4,12 @@ Notes for generating gppkg with pre-compiled libraries
 ======================================
 
 To build postgis gppkg, we first need to download the third-party libraries from
-lvy by using make sync_tools provied by gpdb.
+lvy repo by using make sync_tools provided by gpdb.
 Usage:
-	1. located to gpdb gpAux folder
-	2. run make sync_tools
+	1. located to gpdb/gpAux folder
+	2. run make sync_tools [BLD_ARCH="rhel5_x86_64"]
 
-Below lines should be added into file 'gpdb/gpAux/releng/make/dependencies/ivy.xml'.
+Below lines should be contained within file 'gpdb/gpAux/releng/make/dependencies/ivy.xml'.
 ```xml
  <!-- dependency for PostGIS -->
       <dependency org="geos"                  name="geos"      rev="3.4.2"          conf="rhel5_x86_64->rhel5_x86_64;suse10_x86_64->suse10_x86_64" />
@@ -22,11 +22,11 @@ Below lines should be added into file 'gpdb/gpAux/releng/make/dependencies/ivy.x
 2. Compile postgis gppkg
 ======================================
 
-After downloaded libraries, go to package folder. And run make BLD_TARGETS="gppkg" with user-defined
-parameters, which include BLD_ARCH (the os version), GPROOT (the location of
-gpAux folder), BLD_TOP (the location of libraries, usually same as GPROOT), 
-POSGIS_DIR (the location of postgis source folder), INSTLOC (the location of
-installed gpdb), and use gppkg as build traget. 
+After downloaded libraries, go to package folder. And run make BLD_TARGETS="gppkg"
+with user-defined parameters, which include BLD_ARCH (the os version), GPROOT (the
+location of gpAux folder), BLD_TOP (the location of libraries, usually same as GPROOT), 
+POSGIS_DIR (the location of postgis source folder), INSTLOC (the location of installed
+gpdb), and use gppkg as build traget. 
 
 An example is to write a shell 'build.sh' with lines:
 ```sh
@@ -49,12 +49,12 @@ To clean it, run:
 3. Verification and installation
 ======================================
 
-run belowing line to verify postgis.gppkg is ready.
+run belowing command to verify postgis.gppkg is ready.
 ```sh
 	gppkg --query postgis-ossv2.1.5_pv2.1_gpdb4.4-rhel5-x86_64.gppkg
 ```
 
-run belowing line to install postgis.gppkg into gpdb.
+run belowing belowing to install postgis.gppkg into gpdb.
 ```sh
 	gppkg -i postgis-ossv2.1.5_pv2.1_gpdb4.4-rhel5-x86_64.gppkg
 ```

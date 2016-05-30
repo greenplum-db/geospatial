@@ -78,13 +78,10 @@ build_postgis:
 	$(MAKE) -C ..
 
 # for regressing
-DEP_LIBS_PATH=$(GEOS_DIR) $(PROJ_DIR) $(JSON_DIR) $(GDAL_DIR)
-DEP_LIBS_BE=$(GEOS_LIBS_BE) $(PROJ_LIBS_BE) $(JSON_LIBS_BE) $(GDAL_LIBS_BE)
-DEP_LIBS_AF=$(GEOS_LIBS_AF) $(PROJ_LIBS_AF) $(JSON_LIBS_AF) $(GDAL_LIBS_AF)
+DEP_LIBS_PATH=$(GEOS_DIR) $(PROJ_DIR) $(JSON_DIR) $(GDAL_DIR) $(LIBEXPAT_DIR)
 
 #for data dir copying during source-code-building (not form GPROOT)
 DEP_LIBS_DATA=$(GDAL_DIR)/share/gdal $(PROJ_DIR)/share/proj
-GPDB_DATA_AF=$(GPDB_DIR)/share/gdal $(GPDB_DIR)/share/proj
 
 SHLIB_LINK_F = @SHLIB_LINK@
 SHLIB_LINK := $(SHLIB_LINK_F) $(SHLIB_LINK)
@@ -93,7 +90,7 @@ SHLIB_LINK := $(SHLIB_LINK_F) $(SHLIB_LINK)
 include Makefile.ops
 
 # for compiling
-gppkg: prepare_libs build_postgis gppkg_only
+gppkg: prepare build_postgis gppkg_only
 
 gppkg_only: $(GEOS_DIR) $(PROJ_DIR) $(JSON_DIR) $(GDAL_DIR) $(LIBEXPAT_DIR)
 	$(MAKE) $(GEOS_RPM) RPM_FLAGS=$(GEOS_RPM_FLAGS)

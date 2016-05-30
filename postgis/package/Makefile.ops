@@ -1,6 +1,63 @@
 GPDB_LIB_RELENG_PREFIX=/opt/tools_build/tools/greenplum-db
 
-prepare_libs: remove_la replace_prefix 
+POSTGIS_TAR_BALL=/../source/postgis-$(POSTGIS_VER).tar.gz
+POSTGIS_PATCH_FILE=/../patch/postgis-$(POSTGIS_VER)-GPDB.patch
+
+prepare: check_path check_postgis_path remove_la replace_prefix 
+
+#check all of paths
+check_path:
+		@if [ x"$$GPHOME" = x ]; then \
+			echo "ERROR: You need to set the 'GPHOME' first."; \
+			exit 1 ; \
+		fi
+		@if [ x"$(POSTGIS_DIR)" = x ]; then \
+			echo "ERROR:  the directory of postgis source does not set."; \
+			exit 1 ; \
+		fi
+		@if [ x"$(GEOS_DIR)" = x ]; then \
+			echo "ERROR:  the directory of GEOS does not set."; \
+			exit 1 ; \
+		fi
+		@if [ x"$(PROJ_DIR)" = x ]; then \
+			echo "ERROR:  the directory of PROJ does not set."; \
+			exit 1 ; \
+		fi
+		@if [ x"$(JSON_DIR)" = x ]; then \
+			echo "ERROR:  the directory of json_c does not set."; \
+			exit 1 ; \
+		fi
+		@if [ x"$(GDAL_DIR)" = x ]; then \
+			echo "ERROR:  the directory of GDAL does not set."; \
+			exit 1 ; \
+		fi
+		@if [ x"$(LIBEXPAT_DIR)" = x ]; then \
+			echo "ERROR:  the directory of LIBEXPAT does not set."; \
+			exit 1; \
+		fi
+		@for lib in  $(DEP_LIBS_PATH); do \
+			if [ ! -d $$lib ]; then \
+				echo "ERROR: The directory $$lib does not exist."; \
+				exit 1; \
+			fi; \
+		done
+
+#check postgis path
+check_postgis_path:
+	@echo "-----------------------------------------------------------------------"
+	@echo "Prepare the compiling directory for postgis-$(POSTGIS_VER)."
+	@echo "-----------------------------------------------------------------------"
+	@if [ -d $(POSTGIS_DIR) ]; then \
+		echo "NOTICE: $(POSTGIS_DIR) exists."; \
+	else \
+		echo "    1. extract $(POSTGIS_TAR_BALL) to $(POSTGIS_DIR) ..."; \
+		tar -zxf $(POSTGIS_TAR_BALL) -C $(POSTGIS_BLD_TOP); \
+		echo "    2. patch it with $(POSTGIS_PATCH_FILE) ..."; \
+		patch -d $(POSTGIS_DIR) -p 4 --silent < $(POSTGIS_PATCH_FILE); \
+		echo "-----------------------------------------------------------------------"; \
+		echo "Done"; \
+		echo "-----------------------------------------------------------------------"; \
+	fi
 
 #remove all .la files in lib folders
 remove_la:
