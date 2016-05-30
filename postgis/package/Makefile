@@ -7,9 +7,6 @@
 # 
 #------------------------------------------------------------------#
 
-#TODO will be fixed after set git submodule
-#BLD_TOP=$(shell cd ../../.. && pwd)
-#BLD_TOP=$(shell cd ~/workspace/gpdb/gpAux/ && pwd)
 include $(BLD_TOP)/Makefile.global     # for BLD_ARCH
 include $(BLD_TOP)/releng/tools.mk
 EXT_TOP=$(BLD_TOP)/ext/$(BLD_ARCH)
@@ -53,10 +50,6 @@ GDAL_CONFIG=$(GDAL_DIR)/bin/gdal-config
 GDAL_RPM_FLAGS="--define 'gdal_dir $(GDAL_DIR)' --define 'gdal_ver $(GDAL_VER)' --define 'gdal_rel $(GDAL_REL)' --define 'libexpat_ver $(LIBEXPAT_VER)' --define 'libexpat_rel $(LIBEXPAT_REL)'"
 GDAL_RPM=gdal-$(GDAL_VER)-$(GDAL_REL).$(ARCH).rpm
 
-#XML2
-XML2_DIR=$(EXT_TOP)
-XML2_CONFIG=$(XML2_DIR)/bin/xml2-config
-
 # LIBEXPAT
 LIBEXPAT_DIR=$(EXT_TOP)/libexpat-$(LIBEXPAT_VER)
 LIBEXPAT_RPM_FLAGS="--define 'libexpat_dir $(LIBEXPAT_DIR)' --define 'libexpat_ver $(LIBEXPAT_VER)' --define 'libexpat_rel $(LIBEXPAT_REL)'"
@@ -81,9 +74,8 @@ include $(BLD_TOP)/releng/gppkg.mk
 
 # trigger the compiling process
 build_postgis:
-	cd $(POSTGIS_DIR) && $(POSTGIS_DIR)/configure --with-geosconfig=$(GEOS_CONFIG) --with-projdir=$(PROJ_DIR) --with-jsondir=$(JSON_DIR) --with-gdalconfig=$(GDAL_CONFIG) --with-pgconfig=$(PG_CONFIG) --with-xml2config=$(XML2_CONFIG) --with-raster --without-topology	--prefix=$$GPHOME 
+	cd $(POSTGIS_DIR) && $(POSTGIS_DIR)/configure --with-geosconfig=$(GEOS_CONFIG) --with-projdir=$(PROJ_DIR) --with-jsondir=$(JSON_DIR) --with-gdalconfig=$(GDAL_CONFIG) --with-pgconfig=$(PG_CONFIG) --with-raster --without-topology	--prefix=$$GPHOME 
 	$(MAKE) -C ..
-
 
 # for regressing
 DEP_LIBS_PATH=$(GEOS_DIR) $(PROJ_DIR) $(JSON_DIR) $(GDAL_DIR)
@@ -97,9 +89,11 @@ GPDB_DATA_AF=$(GPDB_DIR)/share/gdal $(GPDB_DIR)/share/proj
 SHLIB_LINK_F = @SHLIB_LINK@
 SHLIB_LINK := $(SHLIB_LINK_F) $(SHLIB_LINK)
 
-# for compiling
+# modify paths in libs
+include Makefile.ops
 
-gppkg: build_postgis gppkg_only
+# for compiling
+gppkg: prepare_libs build_postgis gppkg_only
 
 gppkg_only: $(GEOS_DIR) $(PROJ_DIR) $(JSON_DIR) $(GDAL_DIR) $(LIBEXPAT_DIR)
 	$(MAKE) $(GEOS_RPM) RPM_FLAGS=$(GEOS_RPM_FLAGS)

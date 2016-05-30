@@ -1,0 +1,15 @@
+GPDB_LIB_RELENG_PREFIX=/opt/tools_build/tools/greenplum-db
+
+prepare_libs: remove_la replace_prefix 
+
+#remove all .la files in lib folders
+remove_la:
+		@for lib in $(DEP_LIBS_PATH); do \
+        	chmod -R +w $$lib; \
+        	echo "rm -rf $$lib/lib/*.a $$lib/lib/*.la $$lib/lib/pkgconfig"; \
+        	rm -rf $$lib/lib/*.a $$lib/lib/*.la $$lib/lib/pkgconfig; \
+		done
+
+replace_prefix:
+		perl -i.bak -p -e "s|$(GPDB_LIB_RELENG_PREFIX)|${GPHOME}|g" $(GDAL_CONFIG) 2>/dev/null
+	
