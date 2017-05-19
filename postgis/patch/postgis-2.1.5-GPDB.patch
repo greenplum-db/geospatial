@@ -10307,23 +10307,8 @@ index 53ca14e..06c9fef 100644
 +SELECT rid, st_width(rast), st_height(rast), st_bandpixeltype(rast,1), st_bandpixeltype(rast,2), st_bandpixeltype(rast,3) FROM car5 order by rid;
  
  DROP TABLE car5;
- 
-diff --git a/postgis/build/postgis-2.1.5/raster/test/regress/bug_test_car5_expected b/postgis/build/postgis-2.1.5/raster/test/regress/bug_test_car5_expected
-index 5599f59..2492ea8 100644
---- a/postgis/build/postgis-2.1.5/raster/test/regress/bug_test_car5_expected
-+++ b/postgis/build/postgis-2.1.5/raster/test/regress/bug_test_car5_expected
-@@ -1,7 +1,7 @@
- BEGIN
--NOTICE:  SRID value -1 converted to the officially unknown SRID value 0 at character 41
--NOTICE:  SRID value -1 converted to the officially unknown SRID value 0 at character 41
--NOTICE:  SRID value -1 converted to the officially unknown SRID value 0 at character 41
-+NOTICE:  SRID value -1 converted to the officially unknown SRID value 0
-+NOTICE:  SRID value -1 converted to the officially unknown SRID value 0
-+NOTICE:  SRID value -1 converted to the officially unknown SRID value 0
- 1|5|5|8BUI|8BUI|8BUI
- 2|5|5|8BUI|8BUI|8BUI
- 3|5|5|8BUI|8BUI|8BUI
-diff --git a/postgis/build/postgis-2.1.5/raster/test/regress/check_raster_columns.sql b/postgis/build/postgis-2.1.5/raster/test/regress/check_raster_columns.sql
+
+diff --git a/postgis/build/postgis-2.1.5/raster/test/regress/check_raster_columns.sql b/postgis/build/postgis-2.1.5/raster/test/regress/check_raster_columns.sql 
 index 40d4377..17897a6 100644
 --- a/postgis/build/postgis-2.1.5/raster/test/regress/check_raster_columns.sql
 +++ b/postgis/build/postgis-2.1.5/raster/test/regress/check_raster_columns.sql
