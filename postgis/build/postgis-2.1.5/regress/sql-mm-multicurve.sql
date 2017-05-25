@@ -1,12 +1,13 @@
 -- Repeat the tests with the new function names.
+SET client_min_messages TO WARNING;
 SELECT 'ndims01', ST_ndims(ST_geomfromewkt('MULTICURVE((
                 5 5 1 3,
                 3 5 2 2,
                 3 3 3 1,
                 0 3 1 1)
                 ,CIRCULARSTRING(
-                0 0 0 0, 
-                0.26794919243112270647255365849413 1 3 -2, 
+                0 0 0 0,
+                0.26794919243112270647255365849413 1 3 -2,
                 0.5857864376269049511983112757903 1.4142135623730950488016887242097 1 2))'));
 SELECT 'geometrytype01', geometrytype(ST_geomfromewkt('MULTICURVE((
                 5 5 1 3,
@@ -14,8 +15,8 @@ SELECT 'geometrytype01', geometrytype(ST_geomfromewkt('MULTICURVE((
                 3 3 3 1,
                 0 3 1 1)
                 ,CIRCULARSTRING(
-                0 0 0 0, 
-                0.26794919243112270647255365849413 1 3 -2, 
+                0 0 0 0,
+                0.26794919243112270647255365849413 1 3 -2,
                 0.5857864376269049511983112757903 1.4142135623730950488016887242097 1 2))'));
 SELECT 'ndims02', ST_ndims(ST_geomfromewkt('MULTICURVE((
                 5 5 1,
@@ -23,8 +24,8 @@ SELECT 'ndims02', ST_ndims(ST_geomfromewkt('MULTICURVE((
                 3 3 3,
                 0 3 1)
                 ,CIRCULARSTRING(
-                0 0 0, 
-                0.26794919243112270647255365849413 1 3, 
+                0 0 0,
+                0.26794919243112270647255365849413 1 3,
                 0.5857864376269049511983112757903 1.4142135623730950488016887242097 1))'));
 SELECT 'geometrytype02', geometrytype(ST_geomfromewkt('MULTICURVE((
                 5 5 1,
@@ -32,8 +33,8 @@ SELECT 'geometrytype02', geometrytype(ST_geomfromewkt('MULTICURVE((
                 3 3 3,
                 0 3 1)
                 ,CIRCULARSTRING(
-                0 0 0, 
-                0.26794919243112270647255365849413 1 3, 
+                0 0 0,
+                0.26794919243112270647255365849413 1 3,
                 0.5857864376269049511983112757903 1.4142135623730950488016887242097 1))'));
 SELECT 'ndims03', ST_ndims(ST_geomfromewkt('MULTICURVEM((
                 5 5 3,
@@ -41,8 +42,8 @@ SELECT 'ndims03', ST_ndims(ST_geomfromewkt('MULTICURVEM((
                 3 3 1,
                 0 3 1)
                 ,CIRCULARSTRING(
-                0 0 0, 
-                0.26794919243112270647255365849413 1 -2, 
+                0 0 0,
+                0.26794919243112270647255365849413 1 -2,
                 0.5857864376269049511983112757903 1.4142135623730950488016887242097 2))'));
 SELECT 'geometrytype03', geometrytype(ST_geomfromewkt('MULTICURVEM((
                 5 5 3,
@@ -50,8 +51,8 @@ SELECT 'geometrytype03', geometrytype(ST_geomfromewkt('MULTICURVEM((
                 3 3 1,
                 0 3 1)
                 ,CIRCULARSTRING(
-                0 0 0, 
-                0.26794919243112270647255365849413 1 -2, 
+                0 0 0,
+                0.26794919243112270647255365849413 1 -2,
                 0.5857864376269049511983112757903 1.4142135623730950488016887242097 2))'));
 SELECT 'ndims04', ST_ndims(ST_geomfromewkt('MULTICURVE((
                 5 5,
@@ -59,8 +60,8 @@ SELECT 'ndims04', ST_ndims(ST_geomfromewkt('MULTICURVE((
                 3 3,
                 0 3)
                 ,CIRCULARSTRING(
-                0 0, 
-                0.26794919243112270647255365849413 1, 
+                0 0,
+                0.26794919243112270647255365849413 1,
                 0.5857864376269049511983112757903 1.4142135623730950488016887242097))'));
 SELECT 'geometrytype04', geometrytype(ST_geomfromewkt('MULTICURVE((
                 5 5,
@@ -68,8 +69,8 @@ SELECT 'geometrytype04', geometrytype(ST_geomfromewkt('MULTICURVE((
                 3 3,
                 0 3)
                 ,CIRCULARSTRING(
-                0 0, 
-                0.26794919243112270647255365849413 1, 
+                0 0,
+                0.26794919243112270647255365849413 1,
                 0.5857864376269049511983112757903 1.4142135623730950488016887242097))'));
 
 CREATE TABLE public.multicurve (id INTEGER, description VARCHAR,
@@ -90,8 +91,8 @@ UPDATE public.multicurve
                 3 3 3 1,
                 0 3 1 1)
                 ,CIRCULARSTRING(
-                0 0 0 0, 
-                0.26794919243112270647255365849413 1 3 -2, 
+                0 0 0 0,
+                0.26794919243112270647255365849413 1 3 -2,
                 0.5857864376269049511983112757903 1.4142135623730950488016887242097 1 2))');
 UPDATE public.multicurve
         SET the_geom_3dz = ST_Geomfromewkt('MULTICURVE((
@@ -100,18 +101,18 @@ UPDATE public.multicurve
                 3 3 3,
                 0 3 1)
                 ,CIRCULARSTRING(
-                0 0 0, 
-                0.26794919243112270647255365849413 1 3, 
+                0 0 0,
+                0.26794919243112270647255365849413 1 3,
                 0.5857864376269049511983112757903 1.4142135623730950488016887242097 1))');
-UPDATE public.multicurve        
+UPDATE public.multicurve
         SET the_geom_3dm = ST_Geomfromewkt('MULTICURVEM((
                 5 5 3,
                 3 5 2,
                 3 3 1,
                 0 3 1)
                 ,CIRCULARSTRING(
-                0 0 0, 
-                0.26794919243112270647255365849413 1 -2, 
+                0 0 0,
+                0.26794919243112270647255365849413 1 -2,
                 0.5857864376269049511983112757903 1.4142135623730950488016887242097 2))');
 UPDATE public.multicurve
         SET the_geom_2d = ST_Geomfromewkt('MULTICURVE((
@@ -120,8 +121,8 @@ UPDATE public.multicurve
                 3 3,
                 0 3)
                 ,CIRCULARSTRING(
-                0 0, 
-                0.26794919243112270647255365849413 1, 
+                0 0,
+                0.26794919243112270647255365849413 1,
                 0.5857864376269049511983112757903 1.4142135623730950488016887242097))');
 
 -- These tests will fail on different architectures
@@ -233,4 +234,5 @@ SELECT DropGeometryColumn('public', 'multicurve', 'the_geom_3dm');
 SELECT DropGeometryColumn('public', 'multicurve', 'the_geom_3dz');
 SELECT DropGeometryColumn('public', 'multicurve', 'the_geom_4d');
 DROP TABLE public.multicurve;
+SET client_min_messages TO NOTICE;
 

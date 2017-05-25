@@ -24,6 +24,7 @@ all install uninstall clean distclean maintainer-clean test check docs docs-inst
 configure: configure.in
 	./autogen.sh
 
+include ../../Makefile.libs
 
-GNUmakefile: GNUmakefile.in
-	./configure
+GNUmakefile: GNUmakefile.in config_with_dep_libs dep_libs_install
+

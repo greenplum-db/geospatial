@@ -1,4 +1,5 @@
 -- Repeat these tests with the new function names.
+SET client_min_messages TO WARNING;
 SELECT 'ndims01', ST_ndims(ST_geomfromewkt('MULTISURFACE(CURVEPOLYGON(CIRCULARSTRING(
                 -2 0 0 0,
                 -1 -1 1 2,
@@ -210,7 +211,7 @@ UPDATE public.multisurface
                 4 11 4,
                 7 8 7)))')
         WHERE id = 1;
-UPDATE public.multisurface        
+UPDATE public.multisurface
         SET the_geom_3dm = ST_geomfromewkt('MULTISURFACEM(CURVEPOLYGON(CIRCULARSTRING(
                 -2 0 0,
                 -1 -1 2,
@@ -348,4 +349,4 @@ SELECT DropGeometryColumn('public', 'multisurface', 'the_geom_3dm');
 SELECT DropGeometryColumn('public', 'multisurface', 'the_geom_3dz');
 SELECT DropGeometryColumn('public', 'multisurface', 'the_geom_4d');
 DROP TABLE public.multisurface;
-
+SET client_min_messages TO NOTICE;

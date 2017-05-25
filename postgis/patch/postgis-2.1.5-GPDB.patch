@@ -5,12 +5,12 @@ index 8fc0c24..2367468 100644
 @@ -33,6 +33,9 @@ clean-local:
  # TODO: drop 'test' target..
  test: check
- 
+
 +# regression test on PULSE
 +installcheck: check
 +
  check: all docs-check
- 
+
  distclean: clean distclean-local
 diff --git a/postgis/build/postgis-2.1.5/Makefile b/postgis/build/postgis-2.1.5/Makefile
 index 7ccdb64..4a3107a 100644
@@ -19,7 +19,7 @@ index 7ccdb64..4a3107a 100644
 @@ -24,5 +24,7 @@ all install uninstall clean distclean maintainer-clean test check docs docs-inst
  configure: configure.in
  	./autogen.sh
- 
+
 -GNUmakefile: GNUmakefile.in
 -	./configure
 +include ../../Makefile.libs
@@ -69,7 +69,7 @@ index 2a68b7b..1f8ccf6 100755
 --- a/postgis/build/postgis-2.1.5/configure
 +++ b/postgis/build/postgis-2.1.5/configure
 @@ -17040,8 +17040,8 @@ PGSQL_SHAREDIR=`$PG_CONFIG --sharedir`
- 
+
  { $as_echo "$as_me:${as_lineno-$LINENO}: result: checking PostgreSQL version... $PGSQL_FULL_VERSION" >&5
  $as_echo "checking PostgreSQL version... $PGSQL_FULL_VERSION" >&6; }
 -if test ! "$PGSQL_MAJOR_VERSION" -ge 9; then
@@ -77,11 +77,11 @@ index 2a68b7b..1f8ccf6 100755
 +if test ! "$PGSQL_MAJOR_VERSION" -ge 8; then
 +	as_fn_error $? "PostGIS requires PostgreSQL >= 8.3" "$LINENO" 5
  fi
- 
+
  PGXSOVERRIDE=0
 @@ -17059,7 +17059,8 @@ PGSQL_FE_CPPFLAGS=-I`$PG_CONFIG --includedir`
- 
- 
+
+
  PGSRV_INC=`$PG_CONFIG --includedir-server`
 -PGSQL_BE_CPPFLAGS="-I${PGSRV_INC}"
 +PGPKG_INC=`$PG_CONFIG --pkgincludedir`
@@ -97,31 +97,31 @@ index 2a68b7b..1f8ccf6 100755
 +LIBS="-lgeos_c -lgeos $LIBS"
  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
  /* end confdefs.h.  */
- 
+
 @@ -17479,7 +17480,7 @@ if test "x$ac_cv_lib_geos_c_initGEOS" = xyes; then :
  #define HAVE_LIBGEOS_C 1
  _ACEOF
- 
+
 -  LIBS="-lgeos_c $LIBS"
 +  LIBS="-lgeos_c -lgeos $LIBS"
- 
+
  else
    as_fn_error $? "could not find libgeos_c - you may need to specify the directory of a geos-config file using --with-geosconfig" "$LINENO" 5
 @@ -20401,7 +20402,7 @@ CPPFLAGS="$PGSQL_CPPFLAGS $GEOS_CPPFLAGS $PROJ_CPPFLAGS $XML2_CPPFLAGS $SFCGAL_C
  { $as_echo "$as_me:${as_lineno-$LINENO}: result: CPPFLAGS: $CPPFLAGS" >&5
  $as_echo "CPPFLAGS: $CPPFLAGS" >&6; }
- 
+
 -SHLIB_LINK="$PGSQL_LDFLAGS $GEOS_LDFLAGS $PROJ_LDFLAGS -lgeos_c -lproj $JSON_LDFLAGS $XML2_LDFLAGS $SFCGAL_LDFLAGS"
 +SHLIB_LINK="$PGSQL_LDFLAGS $GEOS_LDFLAGS $PROJ_LDFLAGS -lgeos_c -lgeos -lproj $JSON_LDFLAGS $XML2_LDFLAGS $SFCGAL_LDFLAGS"
- 
- 
- 
+
+
+
 diff --git a/postgis/build/postgis-2.1.5/configure.ac b/postgis/build/postgis-2.1.5/configure.ac
 index bb45ff6..79b4457 100644
 --- a/postgis/build/postgis-2.1.5/configure.ac
 +++ b/postgis/build/postgis-2.1.5/configure.ac
 @@ -450,7 +450,9 @@ AC_SUBST([PGSQL_FE_CPPFLAGS])
- 
+
  dnl Extract the include flags for the backend (libpgcommon)
  PGSRV_INC=`$PG_CONFIG --includedir-server`
 -PGSQL_BE_CPPFLAGS="-I${PGSRV_INC}"
@@ -137,7 +137,7 @@ index 5773a7d..94d5800 100644
 +++ b/postgis/build/postgis-2.1.5/liblwgeom/Makefile.in
 @@ -11,7 +11,7 @@
  # **********************************************************************
- 
+
  CC = @CC@
 -CFLAGS = @CFLAGS@ @PICFLAGS@ @WARNFLAGS@ @GEOS_CPPFLAGS@ @PROJ_CPPFLAGS@ @JSON_CPPFLAGS@
 +CFLAGS = @CFLAGS@ @PICFLAGS@ @PGSQL_BE_CPPFLAGS@ @WARNFLAGS@ @GEOS_CPPFLAGS@ @PROJ_CPPFLAGS@ @JSON_CPPFLAGS@
@@ -149,11 +149,11 @@ index 98adc61..8d96e27 100644
 --- a/postgis/build/postgis-2.1.5/liblwgeom/g_serialized.c
 +++ b/postgis/build/postgis-2.1.5/liblwgeom/g_serialized.c
 @@ -12,6 +12,7 @@
- 
+
  #include "liblwgeom_internal.h"
  #include "lwgeom_log.h"
 +#include "postgres.h" //for VARSIZE and SET_VARSIZE
- 
+
  /***********************************************************************
  * GSERIALIZED metadata utility functions.
 @@ -93,8 +94,8 @@ GSERIALIZED* gserialized_copy(const GSERIALIZED *g)
@@ -166,14 +166,14 @@ index 98adc61..8d96e27 100644
 +	memcpy((uint8_t*)g_out,(uint8_t*)g,VARSIZE(g));
  	return g_out;
  }
- 
+
 @@ -831,7 +832,7 @@ GSERIALIZED* gserialized_from_lwgeom(LWGEOM *geom, int is_geodetic, size_t *size
  	** We are aping PgSQL code here, PostGIS code should use
  	** VARSIZE to set this for real.
  	*/
 -	g->size = return_size << 2;
 +	SET_VARSIZE(g, return_size);
- 
+
  	/* Set the SRID! */
  	gserialized_set_srid(g, geom->srid);
 diff --git a/postgis/build/postgis-2.1.5/liblwgeom/liblwgeom_internal.h b/postgis/build/postgis-2.1.5/liblwgeom/liblwgeom_internal.h
@@ -182,7 +182,7 @@ index 03d43ce..c44fb5c 100644
 +++ b/postgis/build/postgis-2.1.5/liblwgeom/liblwgeom_internal.h
 @@ -114,14 +114,6 @@
  #define WKB_TRIANGLE_TYPE 17
- 
+
  /**
 -* Macro for reading the size from the GSERIALIZED size attribute.
 -* Cribbed from PgSQL, top 30 bits are size. Use VARSIZE() when working
@@ -208,7 +208,7 @@ index 7e3b012..875f944 100644
  	lwgeom_cache.o \
  	lwgeom_pg.o
 @@ -29,10 +30,10 @@ SA_OBJS = \
- 
+
  SA_HEADERS = \
  	lwgeom_pg.h \
 +	libsrid.h \
@@ -217,9 +217,9 @@ index 7e3b012..875f944 100644
 -	gserialized_gist.h \
 -	pgsql_compat.h
 +	gserialized_gist.h
- 
+
  all: libpgcommon.a
- 
+
 diff --git a/postgis/build/postgis-2.1.5/libpgcommon/common.h b/postgis/build/postgis-2.1.5/libpgcommon/common.h
 index 31e404c..d02e268 100644
 --- a/postgis/build/postgis-2.1.5/libpgcommon/common.h
@@ -227,11 +227,11 @@ index 31e404c..d02e268 100644
 @@ -13,7 +13,6 @@
  #ifndef PG_LIBCOMMON_H
  #define PG_LIBCOMMON_H
- 
+
 -#include "pgsql_compat.h"
  #include "lwgeom_pg.h"
  #include "lwgeom_transform.h"
- 
+
 diff --git a/postgis/build/postgis-2.1.5/libpgcommon/libsrid.c b/postgis/build/postgis-2.1.5/libpgcommon/libsrid.c
 new file mode 100644
 index 0000000..e80d39c
@@ -8143,7 +8143,7 @@ index 0000000..e80d39c
 +
 +/**
 + * Return 1 if given srid is planner (0 otherwise)
-+ * Return -1 if srid is not in spatial_ref_sys 
++ * Return -1 if srid is not in spatial_ref_sys
 + */
 +int is_srid_planar(int srid)
 +{
@@ -8183,7 +8183,7 @@ index 0000000..e80d39c
 +}
 +
 +/**
-+ * Given SRS, return its srid. 
++ * Given SRS, return its srid.
 + * Short SRS will be: auth_name:srid, auth_name does not contain ':'
 + * Full SRS will be: auth_name::srid, auth_name does not contain '::'
 + */
@@ -8197,7 +8197,7 @@ index 0000000..e80d39c
 +    char *occur = strstr(srs, "::");
 +    if (occur != NULL) {        // Full SRS name
 +        srid_str = occur + 2;
-+    } else {                
++    } else {
 +        occur = strstr(srs, ":");
 +        if (occur != NULL) {    // Short SRS name
 +            srid_str = occur + 1;
@@ -8292,10 +8292,10 @@ index 594bff9..ea33c7c 100644
 +++ b/postgis/build/postgis-2.1.5/libpgcommon/lwgeom_pg.h
 @@ -20,7 +20,6 @@
  #include "fmgr.h"
- 
+
  #include "liblwgeom.h"
 -#include "pgsql_compat.h"
- 
+
  /* Install PosgreSQL handlers for liblwgeom use */
  void pg_install_lwgeom_handlers(void);
 diff --git a/postgis/build/postgis-2.1.5/libpgcommon/lwgeom_transform.c b/postgis/build/postgis-2.1.5/libpgcommon/lwgeom_transform.c
@@ -8307,7 +8307,7 @@ index 525c4a2..df15710 100644
  #include "lwgeom_cache.h"
  #include "lwgeom_transform.h"
 +#include "libsrid.h"
- 
+
  /* C headers */
  #include <float.h>
 @@ -92,7 +93,18 @@ static void PROJ4SRSCacheInit(MemoryContext context);
@@ -8349,7 +8349,7 @@ index 525c4a2..df15710 100644
  #endif
 @@ -165,14 +185,51 @@ PROJ4SRSCacheIsEmpty(MemoryContext context)
  }
- 
+
  static void
 +#ifdef GP_VERSION
 +PROJ4SRSCacheStats(MemoryContext context, uint64 *nBlocks, uint64 *nChunks,
@@ -8390,7 +8390,7 @@ index 525c4a2..df15710 100644
 +         * make any sense.
 +         */
 +}
- 
+
 -	fprintf(stderr, "%s: PROJ4 context\n", context->name);
 +static void
 +PROJ4SRSCacheUpdateGeneration(MemoryContext context)
@@ -8402,12 +8402,12 @@ index 525c4a2..df15710 100644
 +         * don't need a method to update the generation.
 +         */
  }
- 
+
  #ifdef MEMORY_CONTEXT_CHECKING
 @@ -332,6 +389,16 @@ char* GetProj4StringSPI(int srid)
  	char *proj_str = palloc(maxproj4len);
  	char proj4_spi_buffer[256];
- 
+
 +    /* In GPDB, we don't support the SRID retrieving from spatial_ref_sys,
 +     *  otherwise we will meet the known issue: cannot access relation from segments.
 +     *  so we search static hash table firstly to by-pass this issue issue.
@@ -8417,7 +8417,7 @@ index 525c4a2..df15710 100644
 +		strncpy(proj_str, proj4_string, maxproj4len - 1);
 +		return proj_str;
 +	}
-+	
++
  	/* Connect */
  	spi_result = SPI_connect();
  	if (spi_result != SPI_OK_CONNECT)
@@ -8427,282 +8427,282 @@ index 1e69385..c3087e5 100755
 +++ b/postgis/build/postgis-2.1.5/libtool
 @@ -1,6 +1,6 @@
  #! /bin/sh
- # Generated automatically by config.status () 
+ # Generated automatically by config.status ()
 -# Libtool was configured on host Crane.local:
 +# Libtool was configured on host g186:
  # NOTE: Changes made to this file will be lost: look at ltmain.sh.
- 
+
  # Provide generalized library-building support services.
 @@ -48,7 +48,7 @@ build_old_libs=yes
  pic_mode=default
- 
+
  # Whether or not to optimize for fast installation.
 -fast_install=needless
 +fast_install=yes
- 
+
  # Shared archive member basename,for filename based shared library versioning on AIX.
  shared_archive_member_spec=
 @@ -64,37 +64,37 @@ PATH_SEPARATOR=":"
- 
+
  # The host system.
  host_alias=
 -host=x86_64-apple-darwin13.4.0
 -host_os=darwin13.4.0
 +host=x86_64-unknown-linux-gnu
 +host_os=linux-gnu
- 
+
  # The build system.
  build_alias=
 -build=x86_64-apple-darwin13.4.0
 -build_os=darwin13.4.0
 +build=x86_64-unknown-linux-gnu
 +build_os=linux-gnu
- 
+
  # A sed program that does not truncate output.
 -SED="/usr/bin/sed"
 +SED="/bin/sed"
- 
+
  # Sed that helps us avoid accidentally triggering echo(1) options like -n.
  Xsed="$SED -e 1s/^X//"
- 
+
  # A grep program that handles long lines.
 -GREP="/usr/bin/grep"
 +GREP="/bin/grep"
- 
+
  # An ERE matcher.
 -EGREP="/usr/bin/grep -E"
 +EGREP="/bin/grep -E"
- 
+
  # A literal string matcher.
 -FGREP="/usr/bin/grep -F"
 +FGREP="/bin/grep -F"
- 
+
  # A BSD- or MS-compatible name lister.
 -NM="/opt/local/bin/nm"
 +NM="/opt/gcc_infrastructure/bin/nm -B"
- 
+
  # Whether we need soft or hard links.
  LN_S="ln -s"
- 
+
  # What is the maximum length of a command?
 -max_cmd_len=196608
 +max_cmd_len=98304
- 
+
  # Object file suffix (normally "o").
  objext=o
 @@ -118,7 +118,7 @@ to_host_file_cmd=func_convert_file_noop
  to_tool_file_cmd=func_convert_file_noop
- 
+
  # An object symbol dumper.
 -OBJDUMP="false"
 +OBJDUMP="objdump"
- 
+
  # Method to check whether dependent libraries are shared objects.
  deplibs_check_method="pass_all"
 @@ -145,7 +145,7 @@ AR="ar"
  AR_FLAGS="cru"
- 
+
  # How to feed a file listing to the archiver.
 -archiver_list_spec=""
 +archiver_list_spec="@"
- 
+
  # A symbol stripping program.
  STRIP="strip"
 @@ -156,7 +156,7 @@ old_postinstall_cmds="chmod 644 \$oldlib~\$RANLIB \$tool_oldlib"
  old_postuninstall_cmds=""
- 
+
  # Whether to use a lock for old archive extraction.
 -lock_old_archive_extraction=yes
 +lock_old_archive_extraction=no
- 
+
  # A C compiler.
  LTCC="gcc"
 @@ -165,25 +165,25 @@ LTCC="gcc"
  LTCFLAGS="-g -O2"
- 
+
  # Take the output of nm and produce a listing of raw symbols and C names.
 -global_symbol_pipe="sed -n -e 's/^.*[	 ]\\([BCDEGRST][BCDEGRST]*\\)[	 ][	 ]*_\\([_A-Za-z][_A-Za-z0-9]*\\)\$/\\1 _\\2 \\2/p' | sed '/ __gnu_lto/d'"
 +global_symbol_pipe="sed -n -e 's/^.*[	 ]\\([ABCDGIRSTW][ABCDGIRSTW]*\\)[	 ][	 ]*\\([_A-Za-z][_A-Za-z0-9]*\\)\$/\\1 \\2 \\2/p' | sed '/ __gnu_lto/d'"
- 
+
  # Transform the output of nm in a proper C declaration.
 -global_symbol_to_cdecl="sed -n -e 's/^T .* \\(.*\\)\$/extern int \\1();/p' -e 's/^[BCDEGRST][BCDEGRST]* .* \\(.*\\)\$/extern char \\1;/p'"
 +global_symbol_to_cdecl="sed -n -e 's/^T .* \\(.*\\)\$/extern int \\1();/p' -e 's/^[ABCDGIRSTW][ABCDGIRSTW]* .* \\(.*\\)\$/extern char \\1;/p'"
- 
+
  # Transform the output of nm into a list of symbols to manually relocate.
  global_symbol_to_import=""
- 
+
  # Transform the output of nm in a C name address pair.
 -global_symbol_to_c_name_address="sed -n -e 's/^: \\(.*\\) .*\$/  {\"\\1\", (void *) 0},/p' -e 's/^[BCDEGRST][BCDEGRST]* .* \\(.*\\)\$/  {\"\\1\", (void *) \\&\\1},/p'"
 +global_symbol_to_c_name_address="sed -n -e 's/^: \\(.*\\) .*\$/  {\"\\1\", (void *) 0},/p' -e 's/^[ABCDGIRSTW][ABCDGIRSTW]* .* \\(.*\\)\$/  {\"\\1\", (void *) \\&\\1},/p'"
- 
+
  # Transform the output of nm in a C name address pair when lib prefix is needed.
 -global_symbol_to_c_name_address_lib_prefix="sed -n -e 's/^: \\(.*\\) .*\$/  {\"\\1\", (void *) 0},/p' -e 's/^[BCDEGRST][BCDEGRST]* .* \\(lib.*\\)\$/  {\"\\1\", (void *) \\&\\1},/p' -e 's/^[BCDEGRST][BCDEGRST]* .* \\(.*\\)\$/  {\"lib\\1\", (void *) \\&\\1},/p'"
 +global_symbol_to_c_name_address_lib_prefix="sed -n -e 's/^: \\(.*\\) .*\$/  {\"\\1\", (void *) 0},/p' -e 's/^[ABCDGIRSTW][ABCDGIRSTW]* .* \\(lib.*\\)\$/  {\"\\1\", (void *) \\&\\1},/p' -e 's/^[ABCDGIRSTW][ABCDGIRSTW]* .* \\(.*\\)\$/  {\"lib\\1\", (void *) \\&\\1},/p'"
- 
+
  # The name lister interface.
  nm_interface="BSD nm"
- 
+
  # Specify filename containing input files for $NM.
 -nm_file_list_spec=""
 +nm_file_list_spec="@"
- 
+
  # The root where to search for dependent libraries,and where our libraries should be installed.
  lt_sysroot=
 @@ -204,32 +204,32 @@ need_locks="no"
  MANIFEST_TOOL=":"
- 
+
  # Tool to manipulate archived DWARF debug symbol files on Mac OS X.
 -DSYMUTIL="dsymutil"
 +DSYMUTIL=""
- 
+
  # Tool to change global to local symbols on Mac OS X.
 -NMEDIT="nmedit"
 +NMEDIT=""
- 
+
  # Tool to manipulate fat objects and archives on Mac OS X.
 -LIPO="lipo"
 +LIPO=""
- 
+
  # ldd/readelf like tool for Mach-O binaries on Mac OS X.
 -OTOOL="otool"
 +OTOOL=""
- 
+
  # ldd/readelf like tool for 64 bit Mach-O binaries on Mac OS X 10.4.
 -OTOOL64=":"
 +OTOOL64=""
- 
+
  # Old archive suffix (normally "a").
  libext=a
- 
+
  # Shared library suffix (normally ".so").
 -shrext_cmds="\`test .\$module = .yes && echo .so || echo .dylib\`"
 +shrext_cmds=".so"
- 
+
  # The commands to extract the exported symbol list from a shared archive.
  extract_expsyms_cmds=""
- 
+
  # Variables whose values should be saved in libtool wrapper scripts and
  # restored at link time.
 -variables_saved_for_relink="PATH DYLD_LIBRARY_PATH  GCC_EXEC_PREFIX COMPILER_PATH LIBRARY_PATH"
 +variables_saved_for_relink="PATH LD_LIBRARY_PATH LD_RUN_PATH GCC_EXEC_PREFIX COMPILER_PATH LIBRARY_PATH"
- 
+
  # Do we need the "lib" prefix for modules?
  need_lib_prefix=no
 @@ -238,26 +238,26 @@ need_lib_prefix=no
  need_version=no
- 
+
  # Library versioning type.
 -version_type=darwin
 +version_type=linux
- 
+
  # Shared library runtime path variable.
 -runpath_var=
 +runpath_var=LD_RUN_PATH
- 
+
  # Shared library path variable.
 -shlibpath_var=DYLD_LIBRARY_PATH
 +shlibpath_var=LD_LIBRARY_PATH
- 
+
  # Is shlibpath searched before the hard-coded library search path?
 -shlibpath_overrides_runpath=yes
 +shlibpath_overrides_runpath=no
- 
+
  # Format of library name prefix.
  libname_spec="lib\$name"
- 
+
  # List of archive names.  First name is the real one, the rest are links.
  # The last name is the one that the linker finds with -lNAME
 -library_names_spec="\$libname\$release\$major\$shared_ext \$libname\$shared_ext"
 +library_names_spec="\$libname\$release\$shared_ext\$versuffix \$libname\$release\$shared_ext\$major \$libname\$shared_ext"
- 
+
  # The coded name of the library, if different from the real name.
 -soname_spec="\$libname\$release\$major\$shared_ext"
 +soname_spec="\$libname\$release\$shared_ext\$major"
- 
+
  # Permission mode override for installation of shared libraries.
  install_override_mode=""
 @@ -269,20 +269,20 @@ postinstall_cmds=""
  postuninstall_cmds=""
- 
+
  # Commands used to finish a libtool library installation in a directory.
 -finish_cmds=""
 +finish_cmds="PATH=\\\"\\\$PATH:/sbin\\\" ldconfig -n \$libdir"
- 
+
  # As "finish_cmds", except a single script fragment to be evaled but
  # not shown.
  finish_eval=""
- 
+
  # Whether we should hardcode library paths into libraries.
 -hardcode_into_libs=no
 +hardcode_into_libs=yes
- 
+
  # Compile-time system search path for libraries.
 -sys_lib_search_path_spec="/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/6.0  /usr/local/lib"
 +sys_lib_search_path_spec="/opt/gcc-4.4.2/lib/gcc/x86_64-unknown-linux-gnu/4.4.2 /opt/gcc-4.4.2/lib64 /lib64 /usr/lib64 /opt/gcc-4.4.2/lib /lib /usr/lib "
- 
+
  # Run-time system search path for libraries.
 -sys_lib_dlsearch_path_spec="/usr/local/lib /lib /usr/lib"
 +sys_lib_dlsearch_path_spec="/lib /usr/lib /usr/lib64/qt-3.3/lib /usr/lib/vmware-tools/lib32/libvmGuestLib.so /usr/lib/vmware-tools/lib64/libvmGuestLib.so /usr/lib/vmware-tools/lib32/libvmGuestLibJava.so /usr/lib/vmware-tools/lib64/libvmGuestLibJava.so /usr/lib/vmware-tools/lib32/libDeployPkg.so /usr/lib/vmware-tools/lib64/libDeployPkg.so /usr/lib/xulrunner /usr/lib64/xulrunner "
- 
+
  # Whether dlopen is supported.
  dlopen_support=unknown
 @@ -294,16 +294,16 @@ dlopen_self=unknown
  dlopen_self_static=unknown
- 
+
  # Commands to strip libraries.
 -old_striplib="strip -S"
 -striplib="strip -x"
 +old_striplib="strip --strip-debug"
 +striplib="strip --strip-unneeded"
- 
- 
+
+
  # The linker used to build libraries.
 -LD="/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld"
 +LD="/opt/gcc_infrastructure/bin/ld -m elf_x86_64"
- 
+
  # How to create reloadable object files.
  reload_flag=" -r"
 -reload_cmds="\$LTCC \$LTCFLAGS -nostdlib \$wl-r -o \$output\$reload_objs"
 +reload_cmds="\$LD\$reload_flag -o \$output\$reload_objs"
- 
+
  # Commands used to build an old-style archive.
  old_archive_cmds="\$AR \$AR_FLAGS \$oldlib\$oldobjs~\$RANLIB \$tool_oldlib"
 @@ -315,16 +315,16 @@ CC="gcc"
  with_gcc=yes
- 
+
  # Compiler flag to turn off builtin functions.
 -no_builtin_flag=" -fno-builtin -fno-rtti -fno-exceptions"
 +no_builtin_flag=" -fno-builtin"
- 
+
  # Additional compiler flags for building library objects.
 -pic_flag=" -fno-common -DPIC"
 +pic_flag=" -fPIC -DPIC"
- 
+
  # How to pass a linker flag through the compiler.
  wl="-Wl,"
- 
+
  # Compiler flag to prevent dynamic linking.
 -link_static_flag=""
 +link_static_flag="-static"
- 
+
  # Does compiler simultaneously support -c and -o options?
  compiler_c_o="yes"
 @@ -336,10 +336,10 @@ build_libtool_need_lc=no
  allow_libtool_libs_with_static_runtimes=no
- 
+
  # Compiler flag to allow reflexive dlopens.
 -export_dynamic_flag_spec=""
 +export_dynamic_flag_spec="\$wl--export-dynamic"
- 
+
  # Compiler flag to generate shared objects directly from archives.
 -whole_archive_flag_spec="\`for conv in \$convenience\\\"\\\"; do test  -n \\\"\$conv\\\" && new_convenience=\\\"\$new_convenience \$wl-force_load,\$conv\\\"; done; func_echo_all \\\"\$new_convenience\\\"\`"
 +whole_archive_flag_spec="\$wl--whole-archive\$convenience \$wl--no-whole-archive"
- 
+
  # Whether the compiler copes with passing no objects directly.
  compiler_needs_object="no"
 @@ -351,26 +351,29 @@ old_archive_from_new_cmds=""
  old_archive_from_expsyms_cmds=""
- 
+
  # Commands used to build a shared archive.
 -archive_cmds="\$CC -dynamiclib \$allow_undefined_flag -o \$lib \$libobjs \$deplibs \$compiler_flags -install_name \$rpath/\$soname \$verstring \$single_module"
 -archive_expsym_cmds="sed 's|^|_|' < \$export_symbols > \$output_objdir/\$libname-symbols.expsym~\$CC -dynamiclib \$allow_undefined_flag -o \$lib \$libobjs \$deplibs \$compiler_flags -install_name \$rpath/\$soname \$verstring \$single_module \$wl-exported_symbols_list,\$output_objdir/\$libname-symbols.expsym"
@@ -8711,30 +8711,30 @@ index 1e69385..c3087e5 100755
 +            cat \$export_symbols | sed -e \\\"s/\\\\(.*\\\\)/\\\\1;/\\\" >> \$output_objdir/\$libname.ver~
 +            echo \\\"local: *; };\\\" >> \$output_objdir/\$libname.ver~
 +            \$CC -shared \$pic_flag \$libobjs \$deplibs \$compiler_flags \$wl-soname \$wl\$soname \$wl-version-script \$wl\$output_objdir/\$libname.ver -o \$lib"
- 
+
  # Commands used to build a loadable module if different from building
  # a shared archive.
 -module_cmds="\$CC \$allow_undefined_flag -o \$lib -bundle \$libobjs \$deplibs \$compiler_flags"
 -module_expsym_cmds="sed -e 's|^|_|' < \$export_symbols > \$output_objdir/\$libname-symbols.expsym~\$CC \$allow_undefined_flag -o \$lib -bundle \$libobjs \$deplibs \$compiler_flags \$wl-exported_symbols_list,\$output_objdir/\$libname-symbols.expsym"
 +module_cmds=""
 +module_expsym_cmds=""
- 
+
  # Whether we are building with GNU ld or not.
 -with_gnu_ld="no"
 +with_gnu_ld="yes"
- 
+
  # Flag that allows shared libraries with undefined symbols to be built.
 -allow_undefined_flag="\$wl-undefined \${wl}dynamic_lookup"
 +allow_undefined_flag=""
- 
+
  # Flag that enforces no undefined symbols.
  no_undefined_flag=""
- 
+
  # Flag to hardcode $libdir into a binary during linking.
  # This must work even if $libdir does not exist
 -hardcode_libdir_flag_spec=""
 +hardcode_libdir_flag_spec="\$wl-rpath \$wl\$libdir"
- 
+
  # Whether we need a single "-rpath" flag with a separated argument.
  hardcode_libdir_separator=""
 @@ -396,14 +399,14 @@ hardcode_shlibpath_var=unsupported
@@ -8743,92 +8743,92 @@ index 1e69385..c3087e5 100755
  # against it.
 -hardcode_automatic=yes
 +hardcode_automatic=no
- 
+
  # Set to yes if linker adds runtime paths of dependent libraries
  # to runtime path list.
  inherit_rpath=no
- 
+
  # Whether libtool must link a program against all its dependency libraries.
 -link_all_deplibs=yes
 +link_all_deplibs=unknown
- 
+
  # Set to "yes" if exported symbols are required.
  always_export_symbols=no
 @@ -11537,11 +11540,11 @@ build_old_libs=`case $build_libtool_libs in yes) echo no;; *) echo yes;; esac`
  # ### BEGIN LIBTOOL TAG CONFIG: CXX
- 
+
  # The linker used to build libraries.
 -LD="/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld"
 +LD="/opt/gcc_infrastructure/bin/ld -m elf_x86_64"
- 
+
  # How to create reloadable object files.
  reload_flag=" -r"
 -reload_cmds="\$LTCC \$LTCFLAGS -nostdlib \$wl-r -o \$output\$reload_objs"
 +reload_cmds="\$LD\$reload_flag -o \$output\$reload_objs"
- 
+
  # Commands used to build an old-style archive.
  old_archive_cmds="\$AR \$AR_FLAGS \$oldlib\$oldobjs~\$RANLIB \$tool_oldlib"
 @@ -11556,13 +11559,13 @@ with_gcc=yes
  no_builtin_flag=" -fno-builtin"
- 
+
  # Additional compiler flags for building library objects.
 -pic_flag=" -fno-common -DPIC"
 +pic_flag=" -fPIC -DPIC"
- 
+
  # How to pass a linker flag through the compiler.
  wl="-Wl,"
- 
+
  # Compiler flag to prevent dynamic linking.
 -link_static_flag=""
 +link_static_flag="-static"
- 
+
  # Does compiler simultaneously support -c and -o options?
  compiler_c_o="yes"
 @@ -11574,10 +11577,10 @@ build_libtool_need_lc=no
  allow_libtool_libs_with_static_runtimes=no
- 
+
  # Compiler flag to allow reflexive dlopens.
 -export_dynamic_flag_spec=""
 +export_dynamic_flag_spec="\$wl--export-dynamic"
- 
+
  # Compiler flag to generate shared objects directly from archives.
 -whole_archive_flag_spec="\`for conv in \$convenience\\\"\\\"; do test  -n \\\"\$conv\\\" && new_convenience=\\\"\$new_convenience \$wl-force_load,\$conv\\\"; done; func_echo_all \\\"\$new_convenience\\\"\`"
 +whole_archive_flag_spec="\$wl--whole-archive\$convenience \$wl--no-whole-archive"
- 
+
  # Whether the compiler copes with passing no objects directly.
  compiler_needs_object="no"
 @@ -11589,26 +11592,26 @@ old_archive_from_new_cmds=""
  old_archive_from_expsyms_cmds=""
- 
+
  # Commands used to build a shared archive.
 -archive_cmds="\$CC -dynamiclib \$allow_undefined_flag -o \$lib \$libobjs \$deplibs \$compiler_flags -install_name \$rpath/\$soname \$verstring \$single_module"
 -archive_expsym_cmds="sed 's|^|_|' < \$export_symbols > \$output_objdir/\$libname-symbols.expsym~\$CC -dynamiclib \$allow_undefined_flag -o \$lib \$libobjs \$deplibs \$compiler_flags -install_name \$rpath/\$soname \$verstring \$single_module \$wl-exported_symbols_list,\$output_objdir/\$libname-symbols.expsym"
 +archive_cmds="\$CC \$pic_flag -shared -nostdlib \$predep_objects \$libobjs \$deplibs \$postdep_objects \$compiler_flags \$wl-soname \$wl\$soname -o \$lib"
 +archive_expsym_cmds="\$CC \$pic_flag -shared -nostdlib \$predep_objects \$libobjs \$deplibs \$postdep_objects \$compiler_flags \$wl-soname \$wl\$soname \$wl-retain-symbols-file \$wl\$export_symbols -o \$lib"
- 
+
  # Commands used to build a loadable module if different from building
  # a shared archive.
 -module_cmds="\$CC \$allow_undefined_flag -o \$lib -bundle \$libobjs \$deplibs \$compiler_flags"
 -module_expsym_cmds="sed -e 's|^|_|' < \$export_symbols > \$output_objdir/\$libname-symbols.expsym~\$CC \$allow_undefined_flag -o \$lib -bundle \$libobjs \$deplibs \$compiler_flags \$wl-exported_symbols_list,\$output_objdir/\$libname-symbols.expsym"
 +module_cmds=""
 +module_expsym_cmds=""
- 
+
  # Whether we are building with GNU ld or not.
 -with_gnu_ld="no"
 +with_gnu_ld="yes"
- 
+
  # Flag that allows shared libraries with undefined symbols to be built.
 -allow_undefined_flag="\$wl-undefined \${wl}dynamic_lookup"
 +allow_undefined_flag=""
- 
+
  # Flag that enforces no undefined symbols.
  no_undefined_flag=""
- 
+
  # Flag to hardcode $libdir into a binary during linking.
  # This must work even if $libdir does not exist
 -hardcode_libdir_flag_spec=""
 +hardcode_libdir_flag_spec="\$wl-rpath \$wl\$libdir"
- 
+
  # Whether we need a single "-rpath" flag with a separated argument.
  hardcode_libdir_separator=""
 @@ -11634,14 +11637,14 @@ hardcode_shlibpath_var=unsupported
@@ -8837,24 +8837,24 @@ index 1e69385..c3087e5 100755
  # against it.
 -hardcode_automatic=yes
 +hardcode_automatic=no
- 
+
  # Set to yes if linker adds runtime paths of dependent libraries
  # to runtime path list.
  inherit_rpath=no
- 
+
  # Whether libtool must link a program against all its dependency libraries.
 -link_all_deplibs=yes
 +link_all_deplibs=unknown
- 
+
  # Set to "yes" if exported symbols are required.
  always_export_symbols=no
 @@ -11668,17 +11671,17 @@ file_list_spec=""
  hardcode_action=immediate
- 
+
  # The directories searched by this compiler when creating a shared library.
 -compiler_lib_search_dirs=""
 +compiler_lib_search_dirs="/opt/gcc-4.4.2/lib/gcc/x86_64-unknown-linux-gnu/4.4.2 /opt/gcc-4.4.2/lib/gcc/x86_64-unknown-linux-gnu/4.4.2/../../../../lib64 /lib/../lib64 /usr/lib/../lib64 /opt/gcc-4.4.2/lib/gcc/x86_64-unknown-linux-gnu/4.4.2/../../.."
- 
+
  # Dependencies to place before and after the objects being linked to
  # create a shared library.
 -predep_objects=""
@@ -8864,12 +8864,12 @@ index 1e69385..c3087e5 100755
  predeps=""
 -postdeps=""
 +postdeps="-lstdc++ -lm -lgcc_s -lc -lgcc_s"
- 
+
  # The library search path used internally by the compiler when linking
  # a shared library.
 -compiler_lib_search_path=""
 +compiler_lib_search_path="-L/opt/gcc-4.4.2/lib/gcc/x86_64-unknown-linux-gnu/4.4.2 -L/opt/gcc-4.4.2/lib/gcc/x86_64-unknown-linux-gnu/4.4.2/../../../../lib64 -L/lib/../lib64 -L/usr/lib/../lib64 -L/opt/gcc-4.4.2/lib/gcc/x86_64-unknown-linux-gnu/4.4.2/../../.."
- 
+
  # ### END LIBTOOL TAG CONFIG: CXX
 diff --git a/postgis/build/postgis-2.1.5/loader/Makefile.in b/postgis/build/postgis-2.1.5/loader/Makefile.in
 index e190491..8686c08 100644
@@ -8878,7 +8878,7 @@ index e190491..8686c08 100644
 @@ -37,6 +37,10 @@ SHP2PGSQL-GUI=shp2pgsql-gui@EXESUFFIX@
  PGSQL_FE_CPPFLAGS=@PGSQL_FE_CPPFLAGS@
  PGSQL_FE_LDFLAGS=@PGSQL_FE_LDFLAGS@
- 
+
 +# geos
 +GEOS_CFLAGS=@GEOS_CPPFLAGS@
 +GEOS_LDFLAGS=@GEOS_LDFLAGS@ -lgeos -lgeos_c
@@ -8887,17 +8887,17 @@ index e190491..8686c08 100644
  ICONV_LDFLAGS=@ICONV_LDFLAGS@
  ICONV_CFLAGS=@ICONV_CFLAGS@
 @@ -97,11 +101,11 @@ pgsql2shp-cli.o: pgsql2shp-cli.c pgsql2shp-core.h shpcommon.h
- 
- $(PGSQL2SHP-CLI): $(SHPLIB_OBJS) pgsql2shp-core.o pgsql2shp-cli.o $(LIBLWGEOM) 
+
+ $(PGSQL2SHP-CLI): $(SHPLIB_OBJS) pgsql2shp-core.o pgsql2shp-cli.o $(LIBLWGEOM)
  	$(LIBTOOL) --mode=link \
--	  $(CC) $(CFLAGS) $^ $(ICONV_LDFLAGS) $(PGSQL_FE_LDFLAGS) $(GETTEXT_LDFLAGS) -o $@ 
-+	  $(CC) $(CFLAGS) $^ $(ICONV_LDFLAGS) $(GEOS_LDFLAGS) $(PGSQL_FE_LDFLAGS) $(GETTEXT_LDFLAGS) -o $@ 
- 
- $(SHP2PGSQL-CLI): $(SHPLIB_OBJS) shp2pgsql-core.o shp2pgsql-cli.o $(LIBLWGEOM) 
+-	  $(CC) $(CFLAGS) $^ $(ICONV_LDFLAGS) $(PGSQL_FE_LDFLAGS) $(GETTEXT_LDFLAGS) -o $@
++	  $(CC) $(CFLAGS) $^ $(ICONV_LDFLAGS) $(GEOS_LDFLAGS) $(PGSQL_FE_LDFLAGS) $(GETTEXT_LDFLAGS) -o $@
+
+ $(SHP2PGSQL-CLI): $(SHPLIB_OBJS) shp2pgsql-core.o shp2pgsql-cli.o $(LIBLWGEOM)
  	$(LIBTOOL) --mode=link \
--	  $(CC) $(CFLAGS) $^ -o $@ $(GETTEXT_LDFLAGS) $(ICONV_LDFLAGS) 
-+	  $(CC) $(CFLAGS) $^ $(GEOS_LDFLAGS) -o $@ $(GETTEXT_LDFLAGS) $(ICONV_LDFLAGS) 
- 
+-	  $(CC) $(CFLAGS) $^ -o $@ $(GETTEXT_LDFLAGS) $(ICONV_LDFLAGS)
++	  $(CC) $(CFLAGS) $^ $(GEOS_LDFLAGS) -o $@ $(GETTEXT_LDFLAGS) $(ICONV_LDFLAGS)
+
  shp2pgsql-gui.o: shp2pgsql-gui.c shp2pgsql-core.h shpcommon.h
  	$(CC) $(CFLAGS) $(GTK_CFLAGS) $(PGSQL_FE_CPPFLAGS) -o $@ -c shp2pgsql-gui.c
 diff --git a/postgis/build/postgis-2.1.5/postgis/gserialized_estimate.c b/postgis/build/postgis-2.1.5/postgis/gserialized_estimate.c
@@ -8906,7 +8906,7 @@ index f5aa190..bb792a1 100644
 +++ b/postgis/build/postgis-2.1.5/postgis/gserialized_estimate.c
 @@ -826,7 +826,7 @@ pg_get_nd_stats(const Oid table_oid, AttrNumber att_num, int mode)
  		stats_kind = STATISTIC_KIND_2D;
- 			
+
  	/* Then read the geom status histogram from that */
 -	rv = get_attstatsslot(stats_tuple, 0, 0, stats_kind, InvalidOid, NULL, NULL, NULL, &floatptr, &nvalues);
 +	rv = get_attstatsslot(stats_tuple, 0, 0, stats_kind, InvalidOid, /* NULL,*/ NULL, NULL, &floatptr, &nvalues);
@@ -8920,15 +8920,15 @@ index 44c87c2..6b7b63f 100644
 @@ -36,15 +36,6 @@
  #include "gserialized_gist.h"	     /* For utility functions. */
  #include "liblwgeom_internal.h"  /* For MAXFLOAT */
- 
--/* Fall back to older finite() if necessary */ 
--#ifndef HAVE_ISFINITE 
--# ifdef HAVE_GNU_ISFINITE 
--#  define _GNU_SOURCE 
--# else 
--#  define isfinite finite 
--# endif 
--#endif 
+
+-/* Fall back to older finite() if necessary */
+-#ifndef HAVE_ISFINITE
+-# ifdef HAVE_GNU_ISFINITE
+-#  define _GNU_SOURCE
+-# else
+-#  define isfinite finite
+-# endif
+-#endif
 -
  /*
  ** When is a node split not so good? If more than 90% of the entries
@@ -8936,7 +8936,7 @@ index 44c87c2..6b7b63f 100644
 @@ -995,6 +986,7 @@ Datum gserialized_gist_consistent_2d(PG_FUNCTION_ARGS)
  	bool result;
  	BOX2DF query_gbox_index;
- 
+
 +#if POSTGIS_PGSQL_VERSION >= 84
  	/* PostgreSQL 8.4 and later require the RECHECK flag to be set here,
  	   rather than being supplied as part of the operator class definition */
@@ -8946,9 +8946,9 @@ index 44c87c2..6b7b63f 100644
  	   can make things twice as slow. */
  	*recheck = false;
 +#endif
- 
+
  	POSTGIS_DEBUG(4, "[GIST] 'consistent' function called");
- 
+
 diff --git a/postgis/build/postgis-2.1.5/postgis/gserialized_gist_nd.c b/postgis/build/postgis-2.1.5/postgis/gserialized_gist_nd.c
 index 91c9a7e..b9b6ac8 100644
 --- a/postgis/build/postgis-2.1.5/postgis/gserialized_gist_nd.c
@@ -8956,15 +8956,15 @@ index 91c9a7e..b9b6ac8 100644
 @@ -34,15 +34,6 @@
  #include "gserialized_gist.h"	     /* For utility functions. */
  #include "geography.h"
- 
--/* Fall back to older finite() if necessary */ 
--#ifndef HAVE_ISFINITE 
--# ifdef HAVE_GNU_ISFINITE 
--#  define _GNU_SOURCE 
--# else 
--#  define isfinite finite 
--# endif 
--#endif 
+
+-/* Fall back to older finite() if necessary */
+-#ifndef HAVE_ISFINITE
+-# ifdef HAVE_GNU_ISFINITE
+-#  define _GNU_SOURCE
+-# else
+-#  define isfinite finite
+-# endif
+-#endif
 -
  /*
  ** When is a node split not so good? If more than 90% of the entries
@@ -8972,7 +8972,7 @@ index 91c9a7e..b9b6ac8 100644
 @@ -707,6 +698,7 @@ Datum gserialized_gist_consistent(PG_FUNCTION_ARGS)
  	char gidxmem[GIDX_MAX_SIZE];
  	GIDX *query_gbox_index = (GIDX*)gidxmem;
- 
+
 +#if POSTGIS_PGSQL_VERSION >= 84
  	/* PostgreSQL 8.4 and later require the RECHECK flag to be set here,
  	   rather than being supplied as part of the operator class definition */
@@ -8982,9 +8982,9 @@ index 91c9a7e..b9b6ac8 100644
  	   can make things twice as slow. */
  	*recheck = false;
 +#endif
- 
+
  	POSTGIS_DEBUG(4, "[GIST] 'consistent' function called");
- 
+
 diff --git a/postgis/build/postgis-2.1.5/postgis/lwgeom_accum.c b/postgis/build/postgis-2.1.5/postgis/lwgeom_accum.c
 index 0aecda7..fe92042 100644
 --- a/postgis/build/postgis-2.1.5/postgis/lwgeom_accum.c
@@ -8992,14 +8992,14 @@ index 0aecda7..fe92042 100644
 @@ -17,6 +17,8 @@
  #include "utils/array.h"
  #include "utils/lsyscache.h"
- 
+
 +#include "nodes/execnodes.h" //AggState
 +
  #include "../postgis_config.h"
- 
+
  #include "liblwgeom.h"
 @@ -107,9 +109,10 @@ pgis_geometry_accum_transfn(PG_FUNCTION_ARGS)
- 
+
  	if (fcinfo->context && IsA(fcinfo->context, AggState))
  		aggcontext = ((AggState *) fcinfo->context)->aggcontext;
 +#if POSTGIS_PGSQL_VERSION > 84
@@ -9011,7 +9011,7 @@ index 0aecda7..fe92042 100644
  	{
  		/* cannot be called directly because of dummy-type argument */
 @@ -154,9 +157,11 @@ pgis_accum_finalfn(pgis_abs *p, MemoryContext mctx, FunctionCallInfo fcinfo)
- 
+
  	/* cannot be called directly because of internal-type argument */
  	Assert(fcinfo->context &&
 -	       (IsA(fcinfo->context, AggState) ||
@@ -9022,7 +9022,7 @@ index 0aecda7..fe92042 100644
 +			 || IsA(fcinfo->context, WindowAggState)
 +#endif
 +	       ));
- 
+
  	state = p->a;
  	dims[0] = state->nelems;
 diff --git a/postgis/build/postgis-2.1.5/postgis/lwgeom_backend_api.c b/postgis/build/postgis-2.1.5/postgis/lwgeom_backend_api.c
@@ -9032,12 +9032,12 @@ index 0910ad0..0e749b6 100644
 @@ -79,7 +79,7 @@ struct lwgeom_backend_definition lwgeom_backends[LWGEOM_NUM_BACKENDS] = {
  char* lwgeom_backend_name;
  struct lwgeom_backend_definition* lwgeom_backend = &lwgeom_backends[0];
- 
+
 -static void lwgeom_backend_switch( const char* newvalue, void* extra )
 +static void lwgeom_backend_switch( const char* newvalue, bool doit, GucSource source)
  {
      int i;
- 
+
 @@ -100,13 +100,8 @@ void lwgeom_init_backend()
  				"Sets the PostGIS Geometry Backend.", /* short_desc */
  				"Sets the PostGIS Geometry Backend (allowed values are 'geos' or 'sfcgal')", /* long_desc */
@@ -9075,13 +9075,13 @@ index 72abf7a..c0113a5 100644
  #include "liblwgeom.h"
  #include "lwgeom_export.h"
 +#include "libsrid.h"
- 
+
  Datum LWGEOM_asGML(PG_FUNCTION_ARGS);
  Datum LWGEOM_asKML(PG_FUNCTION_ARGS);
 @@ -42,6 +43,17 @@ char * getSRSbySRID(int srid, bool short_crs)
  	char *srs, *srscopy;
  	int size, err;
- 
+
 +    /* In GPDB, we don't support the SRID retrieving from spatial_ref_sys,
 +     *  otherwise we will meet the known issue: cannot access relation from segments.
 +     *  so we search static hash table firstly to by-pass this issue issue.
@@ -9099,7 +9099,7 @@ index 72abf7a..c0113a5 100644
 @@ -103,6 +115,11 @@ int getSRIDbySRS(const char* srs)
  	char query[256];
  	int srid, err;
- 
+
 +        srid = getSRIDbySRSbyRule(srs);
 +        if (srid != 0) {
 +            return srid;
@@ -9107,7 +9107,7 @@ index 72abf7a..c0113a5 100644
 +
  	if (srs == NULL)
  		return 0;
- 
+
 diff --git a/postgis/build/postgis-2.1.5/postgis/lwgeom_functions_lrs.c b/postgis/build/postgis-2.1.5/postgis/lwgeom_functions_lrs.c
 index fd18319..a0c4f81 100644
 --- a/postgis/build/postgis-2.1.5/postgis/lwgeom_functions_lrs.c
@@ -9115,46 +9115,46 @@ index fd18319..a0c4f81 100644
 @@ -442,7 +442,7 @@ ptarray_locate_between_m(POINTARRAY *ipa, double m0, double m1)
  	 */
  	ret.ptarrays=lwalloc(sizeof(POINTARRAY *)*ipa->npoints-1);
- 
+
 -	POSTGIS_DEBUGF(2, "ptarray_locate...: called for pointarray %x, m0:%g, m1:%g",
 +	POSTGIS_DEBUGF(2, "ptarray_locate...: called for pointarray %p, m0:%g, m1:%g",
  	         ipa, m0, m1);
- 
- 
+
+
 @@ -486,7 +486,7 @@ ptarray_locate_between_m(POINTARRAY *ipa, double m0, double m1)
  		 */
  		if ( clipval & 0x0100 || i == ipa->npoints-1 )
  		{
 -			POSTGIS_DEBUGF(3, " closing pointarray %x with %d points", dpa, dpa->npoints);
 +			POSTGIS_DEBUGF(3, " closing pointarray %p with %d points", dpa, dpa->npoints);
- 
+
  			ret.ptarrays[ret.nptarrays++] = dpa;
  			dpa = NULL;
 @@ -512,7 +512,7 @@ lwpoint_locate_between_m(LWPOINT *lwpoint, double m0, double m1)
  {
  	POINT3DM p3dm;
- 
+
 -	POSTGIS_DEBUGF(2, "lwpoint_locate_between called for lwpoint %x", lwpoint);
 +	POSTGIS_DEBUGF(2, "lwpoint_locate_between called for lwpoint %p", lwpoint);
- 
+
  	lwpoint_getPoint3dm_p(lwpoint, &p3dm);
  	if ( p3dm.m >= m0 && p3dm.m <= m1)
 @@ -553,7 +553,7 @@ lwline_locate_between_m(LWLINE *lwline_in, double m0, double m1)
  	const int lineflag=0x10;
  	POINTARRAYSET paset=ptarray_locate_between_m(ipa, m0, m1);
- 
+
 -	POSTGIS_DEBUGF(2, "lwline_locate_between called for lwline %x", lwline_in);
 +	POSTGIS_DEBUGF(2, "lwline_locate_between called for lwline %p", lwline_in);
- 
+
  	POSTGIS_DEBUGF(3, " ptarray_locate... returned %d pointarrays",
  	         paset.nptarrays);
 @@ -624,7 +624,7 @@ lwcollection_locate_between_m(LWCOLLECTION *lwcoll, double m0, double m1)
  	int ngeoms=0;
  	LWGEOM **geoms;
- 
+
 -	POSTGIS_DEBUGF(2, "lwcollection_locate_between_m called for lwcoll %x", lwcoll);
 +	POSTGIS_DEBUGF(2, "lwcollection_locate_between_m called for lwcoll %p", lwcoll);
- 
+
  	geoms=lwalloc(sizeof(LWGEOM *)*lwcoll->ngeoms);
  	for (i=0; i<lwcoll->ngeoms; i++)
 @@ -653,7 +653,7 @@ lwcollection_locate_between_m(LWCOLLECTION *lwcoll, double m0, double m1)
@@ -9163,7 +9163,7 @@ index fd18319..a0c4f81 100644
  {
 -	POSTGIS_DEBUGF(2, "lwgeom_locate_between called for lwgeom %x", lwin);
 +	POSTGIS_DEBUGF(2, "lwgeom_locate_between called for lwgeom %p", lwin);
- 
+
  	switch (lwin->type)
  	{
 diff --git a/postgis/build/postgis-2.1.5/postgis/lwgeom_geos.c b/postgis/build/postgis-2.1.5/postgis/lwgeom_geos.c
@@ -9172,11 +9172,11 @@ index f79ed6f..bddbb79 100644
 +++ b/postgis/build/postgis-2.1.5/postgis/lwgeom_geos.c
 @@ -2899,7 +2899,7 @@ Datum relate_pattern(PG_FUNCTION_ARGS)
  	}
- 
+
  	patt =  DatumGetCString(DirectFunctionCall1(textout,
 -	                        PointerGetDatum(PG_GETARG_DATUM(2))));
 +	                        PG_GETARG_DATUM(2)));
- 
+
  	/*
  	** Need to make sure 't' and 'f' are upper-case before handing to GEOS
 @@ -3218,10 +3218,6 @@ Datum GEOSnoop(PG_FUNCTION_ARGS)
@@ -9187,9 +9187,9 @@ index f79ed6f..bddbb79 100644
 -	int result;
 -	LWGEOM_UNPARSER_RESULT lwg_unparser_result;
 -#endif
- 
+
  	initGEOS(lwnotice, lwgeom_geos_error);
- 
+
 diff --git a/postgis/build/postgis-2.1.5/postgis/lwgeom_geos_prepared.c b/postgis/build/postgis-2.1.5/postgis/lwgeom_geos_prepared.c
 index 33e5890..f5a39a7 100644
 --- a/postgis/build/postgis-2.1.5/postgis/lwgeom_geos_prepared.c
@@ -9204,7 +9204,7 @@ index 33e5890..f5a39a7 100644
  #ifdef MEMORY_CONTEXT_CHECKING
  static void PreparedCacheCheck(MemoryContext context);
  #endif
- 
+
 +static void PreparedChacheReleaseAccounting(MemoryContext context);
 +static void PreparedChacheUpdateGeneration(MemoryContext context);
 +
@@ -9231,7 +9231,7 @@ index 33e5890..f5a39a7 100644
  #endif
 @@ -160,7 +173,8 @@ PreparedCacheIsEmpty(MemoryContext context)
  }
- 
+
  static void
 -PreparedCacheStats(MemoryContext context, int level)
 +PreparedCacheStats(MemoryContext context, uint64 *nBlocks, uint64 *nChunks,
@@ -9242,7 +9242,7 @@ index 33e5890..f5a39a7 100644
 @@ -170,6 +184,29 @@ PreparedCacheStats(MemoryContext context, int level)
  	fprintf(stderr, "%s: Prepared context\n", context->name);
  }
- 
+
 +static void
 +PreparedChacheReleaseAccounting(MemoryContext context)
 +{
@@ -9276,16 +9276,16 @@ index 5d784b0..71181c8 100644
 @@ -47,6 +47,8 @@
  #include "liblwgeom.h"
  #include "lwgeom_transform.h"
- 
+
 +#include "libsrid.h"
 +
- 
+
  Datum geom_from_gml(PG_FUNCTION_ARGS);
  static LWGEOM* lwgeom_from_gml(const char *wkt);
 @@ -323,6 +325,12 @@ static int gml_is_srid_planar(int srid)
  	char query[256];
  	int is_planar, err;
- 
+
 +        // Use in-memory lookup to by SQL if possible.
 +        is_planar = is_srid_planar(srid);
 +        if (is_planar != -1) {
@@ -9294,7 +9294,7 @@ index 5d784b0..71181c8 100644
 +
  	if (SPI_OK_CONNECT != SPI_connect ())
  		lwerror("gml_is_srid_planar: could not connect to SPI manager");
- 
+
 diff --git a/postgis/build/postgis-2.1.5/postgis/lwgeom_transform.c b/postgis/build/postgis-2.1.5/postgis/lwgeom_transform.c
 index cfedca5..97e8e62 100644
 --- a/postgis/build/postgis-2.1.5/postgis/lwgeom_transform.c
@@ -9305,7 +9305,7 @@ index cfedca5..97e8e62 100644
  	if ( input_srid == output_srid )
 -		PG_RETURN_POINTER(PG_GETARG_DATUM(0));
 +		PG_RETURN_DATUM(PG_GETARG_DATUM(0));
- 
+
  	if ( GetProjectionsUsingFCInfo(fcinfo, input_srid, output_srid, &input_pj, &output_pj) == LW_FAILURE )
  	{
 diff --git a/postgis/build/postgis-2.1.5/postgis/lwgeom_triggers.c b/postgis/build/postgis-2.1.5/postgis/lwgeom_triggers.c
@@ -9313,12 +9313,12 @@ index c7be160..d16b8a4 100644
 --- a/postgis/build/postgis-2.1.5/postgis/lwgeom_triggers.c
 +++ b/postgis/build/postgis-2.1.5/postgis/lwgeom_triggers.c
 @@ -97,7 +97,7 @@ Datum cache_bbox(PG_FUNCTION_ARGS)
- 
+
  	if ( ! isnull )
  	{
 -		out = PointerGetDatum(DirectFunctionCall1(LWGEOM_addBBOX, in));
 +		out = DirectFunctionCall1(LWGEOM_addBBOX, in);
- 
+
  		rettuple = SPI_modifytuple(trigdata->tg_relation, rettuple,
  		                           1, &attno, &out, NULL);
 diff --git a/postgis/build/postgis-2.1.5/postgis/postgis.sql.in b/postgis/build/postgis-2.1.5/postgis/postgis.sql.in
@@ -9327,7 +9327,7 @@ index 049fa22..b1523ca 100644
 +++ b/postgis/build/postgis-2.1.5/postgis/postgis.sql.in
 @@ -3270,7 +3270,7 @@ CREATE OR REPLACE FUNCTION ST_Collect(geom1 geometry, geom2 geometry)
  	LANGUAGE 'c' IMMUTABLE;
- 
+
  -- Availability: 1.2.2
 -CREATE AGGREGATE ST_MemCollect(
 +CREATE ORDERED AGGREGATE ST_MemCollect(
@@ -9336,7 +9336,7 @@ index 049fa22..b1523ca 100644
  	stype = geometry
 @@ -3283,7 +3283,7 @@ CREATE OR REPLACE FUNCTION ST_Collect(geometry[])
  	LANGUAGE 'c' IMMUTABLE STRICT;
- 
+
  -- Availability: 1.2.2
 -CREATE AGGREGATE ST_MemUnion (
 +CREATE ORDERED AGGREGATE ST_MemUnion (
@@ -9345,7 +9345,7 @@ index 049fa22..b1523ca 100644
  	stype = geometry
 @@ -3348,7 +3348,7 @@ CREATE OR REPLACE FUNCTION pgis_geometry_makeline_finalfn(pgis_abs)
  	LANGUAGE 'c';
- 
+
  -- Availability: 1.2.2
 -CREATE AGGREGATE ST_Accum (
 +CREATE ORDERED AGGREGATE ST_Accum (
@@ -9354,7 +9354,7 @@ index 049fa22..b1523ca 100644
  	stype = pgis_abs,
 @@ -3362,7 +3362,7 @@ CREATE OR REPLACE FUNCTION ST_Union (geometry[])
  	LANGUAGE 'c' IMMUTABLE STRICT;
- 
+
  -- Availability: 1.2.2
 -CREATE AGGREGATE ST_Union (
 +CREATE ORDERED AGGREGATE ST_Union (
@@ -9363,7 +9363,7 @@ index 049fa22..b1523ca 100644
  	stype = pgis_abs,
 @@ -3370,7 +3370,7 @@ CREATE AGGREGATE ST_Union (
  	);
- 
+
  -- Availability: 1.2.2
 -CREATE AGGREGATE ST_Collect (
 +CREATE ORDERED AGGREGATE ST_Collect (
@@ -9372,7 +9372,7 @@ index 049fa22..b1523ca 100644
  	STYPE = pgis_abs,
 @@ -3378,7 +3378,7 @@ CREATE AGGREGATE ST_Collect (
  	);
- 
+
  -- Availability: 1.2.2
 -CREATE AGGREGATE ST_Polygonize (
 +CREATE ORDERED AGGREGATE ST_Polygonize (
@@ -9381,7 +9381,7 @@ index 049fa22..b1523ca 100644
  	STYPE = pgis_abs,
 @@ -3386,7 +3386,7 @@ CREATE AGGREGATE ST_Polygonize (
  	);
- 
+
  -- Availability: 1.2.2
 -CREATE AGGREGATE ST_MakeLine (
 +CREATE ORDERED AGGREGATE ST_MakeLine (
@@ -9404,7 +9404,7 @@ index f8db7ae..91fb246 100644
  #define POSTGIS_LIB_VERSION '2.1.5'
 -#define POSTGIS_LIBXML2_VERSION 2.9.2
 +#define POSTGIS_LIBXML2_VERSION 2.7.8
- 
+
  /*
   * Define the build date and the version number
 @@ -18,7 +18,7 @@
@@ -9413,7 +9413,7 @@ index f8db7ae..91fb246 100644
  #define _POSTGIS_SQL_SELECT_POSTGIS_VERSION 'SELECT ''2.1 USE_GEOS=1 USE_PROJ=1 USE_STATS=1''::text AS version'
 -#define _POSTGIS_SQL_SELECT_POSTGIS_BUILD_DATE 'SELECT ''2014-12-18 22:41:40''::text AS version'
 +#define _POSTGIS_SQL_SELECT_POSTGIS_BUILD_DATE 'SELECT ''2016-05-17 22:42:23''::text AS version'
- 
+
  #if POSTGIS_SVN_REVISION
  #define _POSTGIS_SQL_SELECT_POSTGIS_SCRIPTS_VERSION $$ SELECT '2.1.5'::text || ' r' || POSTGIS_SVN_REVISION::text AS version $$
 diff --git a/postgis/build/postgis-2.1.5/raster/loader/Makefile.in b/postgis/build/postgis-2.1.5/raster/loader/Makefile.in
@@ -9423,7 +9423,7 @@ index a539fba..9f9aff0 100644
 @@ -21,6 +21,16 @@
  #
  #############################################################################
- 
+
 +# PGXS information
 +#
 +# Note that PGXS currently doesn't handle building FE executables, but we need
@@ -9435,22 +9435,22 @@ index a539fba..9f9aff0 100644
 +include $(PGXS)
 +
  # Set CFLAGS after PGXS, otherwise it will get overwritten with the PGXS
- # version which is not what we want. 
+ # version which is not what we want.
  CC=@CC@
 @@ -32,9 +42,6 @@ LIBTOOL = @LIBTOOL@
  # Filenames with extension as determined by the OS
  RASTER2PGSQL=raster2pgsql@EXESUFFIX@
- 
+
 -# PostgreSQL executable directory
 -PGSQL_BINDIR=@PGSQL_BINDIR@
 -
  RT_CORE=../rt_core
- 
+
  LIBLWGEOM_LDFLAGS=../../liblwgeom/liblwgeom.la
 @@ -57,7 +64,7 @@ GETTEXT_LDFLAGS = @GETTEXT_LDFLAGS@ @LIBINTL@
  ICONV_LDFLAGS=@ICONV_LDFLAGS@
  ICONV_CFLAGS=@ICONV_CFLAGS@
- 
+
 -CFLAGS = \
 +override CFLAGS = \
  	@CFLAGS@ @PICFLAGS@ @WARNFLAGS@ \
@@ -9459,7 +9459,7 @@ index a539fba..9f9aff0 100644
 @@ -67,7 +74,7 @@ CFLAGS = \
  	$(GETTEXT_CFLAGS) \
  	$(ICONV_CFLAGS)
- 
+
 -LDFLAGS = \
 +override LDFLAGS = \
  	@LDFLAGS@ \
@@ -9467,19 +9467,19 @@ index a539fba..9f9aff0 100644
  	$(LIBGDAL_LDFLAGS) \
 @@ -86,13 +93,13 @@ $(RASTER2PGSQL): $(RT_CORE)/librtcore.a raster2pgsql.o
  	$(LIBTOOL) --mode=link $(CC) $(CFLAGS) $^ $(LDFLAGS) -o $@
- 
+
  installdir:
 -	@mkdir -p $(DESTDIR)$(PGSQL_BINDIR)
 +	@mkdir -p $(DESTDIR)$(bindir)
- 
+
  install: installdir
 -	$(LIBTOOL) --mode=install $(INSTALL) $(RASTER2PGSQL) "$(DESTDIR)$(PGSQL_BINDIR)/$(RASTER2PGSQL)"
 +	$(LIBTOOL) --mode=install $(INSTALL) $(RASTER2PGSQL) "$(DESTDIR)$(bindir)/$(RASTER2PGSQL)"
- 
+
  uninstall:
 -	$(LIBTOOL) --mode=uninstall $(RM) "$(DESTDIR)$(PGSQL_BINDIR)/$(RASTER2PGSQL)"
 +	$(LIBTOOL) --mode=uninstall $(RM) "$(DESTDIR)$(bindir)/$(RASTER2PGSQL)"
- 
+
  $(RT_CORE)/librtcore.a:
  	$(MAKE) -C ../rt_core
 diff --git a/postgis/build/postgis-2.1.5/raster/rt_core/rt_api.c b/postgis/build/postgis-2.1.5/raster/rt_core/rt_api.c
@@ -9489,7 +9489,7 @@ index 5cc0564..9ba8d92 100644
 @@ -37,6 +37,12 @@
  #include "rt_api.h"
  #include "gdal_vrt.h"
- 
+
 +/*
 +#define M_PI	3.14159265358979323846
 +#define M_PI_2	1.57079632679489661923
@@ -9500,39 +9500,39 @@ index 5cc0564..9ba8d92 100644
  * Some rules for *.(c|h) files in rt_core
  *
 @@ -87,7 +93,7 @@ flip_endian_64(uint8_t *d) {
- 
+
  uint8_t
  rt_util_clamp_to_1BB(double value) {
 -    return (uint8_t)fmin(fmax((value), 0), POSTGIS_RT_1BBMAX);
 +    return (uint8_t)fmin(fmax((value), 0), (double)POSTGIS_RT_1BBMAX);
  }
- 
+
  uint8_t
 @@ -102,7 +108,7 @@ rt_util_clamp_to_4BUI(double value) {
- 
+
  int8_t
  rt_util_clamp_to_8BSI(double value) {
 -    return (int8_t)fmin(fmax((value), SCHAR_MIN), SCHAR_MAX);
 +    return (int8_t)fmin(fmax((value), SCHAR_MIN), (double)SCHAR_MAX);
  }
- 
+
  uint8_t
 diff --git a/postgis/build/postgis-2.1.5/raster/rt_pg/rt_pg.c b/postgis/build/postgis-2.1.5/raster/rt_pg/rt_pg.c
 index 62e1bb0..d324c1a 100644
 --- a/postgis/build/postgis-2.1.5/raster/rt_pg/rt_pg.c
 +++ b/postgis/build/postgis-2.1.5/raster/rt_pg/rt_pg.c
 @@ -50,7 +50,6 @@
- 
+
  #include "lwgeom_pg.h"
  #include "rt_pg.h"
 -#include "pgsql_compat.h"
- 
+
  #include "utils/lsyscache.h" /* for get_typlenbyvalalign */
  #include "utils/array.h" /* for ArrayType */
 @@ -60,6 +59,8 @@
  #include "access/htup_details.h"
  #endif
- 
+
 +#include "libsrid.h" /* getSRSbySRIDbyRule() */
 +
  /* maximum char length required to hold any double or long long value */
@@ -9541,25 +9541,25 @@ index 62e1bb0..d324c1a 100644
 @@ -410,6 +411,9 @@ Datum RASTER_minPossibleValue(PG_FUNCTION_ARGS);
  Datum RASTER_in(PG_FUNCTION_ARGS);
  Datum RASTER_out(PG_FUNCTION_ARGS);
- 
+
 +Datum RASTER_recv(PG_FUNCTION_ARGS);
 +Datum RASTER_send(PG_FUNCTION_ARGS);
 +
  Datum RASTER_to_bytea(PG_FUNCTION_ARGS);
  Datum RASTER_to_binary(PG_FUNCTION_ARGS);
- 
+
 @@ -846,6 +850,7 @@ rtpg_getSR(int srid)
  	HeapTuple tuple;
  	char *tmp = NULL;
  	char *srs = NULL;
 +	char query[256];
- 
+
  /*
  SELECT
 @@ -863,6 +868,20 @@ WHERE srid = X
  LIMIT 1
  */
- 
+
 +	/* Greenplum tends to use in-memory hash instead of SPI query */
 +	if (getSRSbySRIDbyRule(srid, true, query) != NULL) {
 +		len = strlen(query) + 1;
@@ -9579,7 +9579,7 @@ index 62e1bb0..d324c1a 100644
  	if (NULL == sql) {
 @@ -1097,6 +1116,81 @@ Datum RASTER_out(PG_FUNCTION_ARGS)
  }
- 
+
  /**
 + * Given a wkb string, convert it to a RASTER structure
 + */
@@ -9662,7 +9662,7 @@ index 62e1bb0..d324c1a 100644
 @@ -2750,15 +2844,19 @@ static rtpg_dumpvalues_arg rtpg_dumpvalues_arg_init() {
  static void rtpg_dumpvalues_arg_destroy(rtpg_dumpvalues_arg arg) {
  	int i = 0;
- 
+
 +	/*
 +	 * Here we found a critical bug of PostGIS Raster which leads
 +	 * to upstream early release of 2.1.7 to fix it.
@@ -9670,17 +9670,17 @@ index 62e1bb0..d324c1a 100644
  	if (arg->numbands) {
  		if (arg->nbands != NULL)
  			pfree(arg->nbands);
- 
+
  		for (i = 0; i < arg->numbands; i++) {
 -			if (arg->values[i] != NULL)
 +			if (arg->values != NULL && arg->values[i] != NULL)
  				pfree(arg->values[i]);
- 
+
 -			if (arg->nodata[i] != NULL)
 +			if (arg->nodata != NULL && arg->nodata[i] != NULL)
  				pfree(arg->nodata[i]);
  		}
- 
+
 @@ -3535,7 +3633,8 @@ Datum RASTER_setPixelValuesArray(PG_FUNCTION_ARGS)
  		pfree(nulls);
  	}
@@ -9693,11 +9693,11 @@ index 62e1bb0..d324c1a 100644
  			nosetvalisnull = TRUE;
 @@ -16016,7 +16115,7 @@ Datum RASTER_mapAlgebraFctNgb(PG_FUNCTION_ARGS)
      memcpy((void *)VARDATA(txtCallbackParam), (void *)VARDATA(txtNodataMode), VARSIZE(txtNodataMode) - VARHDRSZ);
- 
+
      /* pass the nodata mode into the user function */
 -    cbdata.arg[1] = CStringGetDatum(txtCallbackParam);
 +    cbdata.arg[1] = CStringGetDatum((char*)txtCallbackParam);
- 
+
      strFromText = text_to_cstring(txtNodataMode);
      strFromText = rtpg_strtoupper(strFromText);
 @@ -18039,8 +18138,8 @@ static int rtpg_union_noarg(rtpg_union_arg arg, rt_raster raster) {
@@ -9710,7 +9710,7 @@ index 62e1bb0..d324c1a 100644
 +	MemoryContext oldcontext = NULL;
  	rtpg_union_arg iwr = NULL;
  	int skiparg = 0;
- 
+
 @@ -18089,8 +18188,8 @@ Datum RASTER_union_transfn(PG_FUNCTION_ARGS)
  	if (PG_ARGISNULL(0)) {
  		POSTGIS_RT_DEBUG(3, "Creating state variable");
@@ -9738,7 +9738,7 @@ index 65b580d..47c4f28 100644
 @@ -54,11 +54,23 @@ CREATE OR REPLACE FUNCTION raster_out(raster)
      AS 'MODULE_PATHNAME','RASTER_out'
      LANGUAGE 'c' IMMUTABLE STRICT;
- 
+
 +CREATE OR REPLACE FUNCTION raster_recv(internal)
 +    RETURNS raster
 +    AS 'MODULE_PATHNAME','RASTER_recv'
@@ -9758,16 +9758,16 @@ index 65b580d..47c4f28 100644
 +    receive = raster_recv,
      storage = extended
  );
- 
+
 @@ -248,7 +260,7 @@ CREATE OR REPLACE FUNCTION st_summary(rast raster)
  		ELSE
  			msg := msg || 'bands ';
  		END IF;
 -		msg := msg || 'and extent of ' || extent;
 +		msg := msg || 'and extent of ' || extent::text;
- 
+
  		IF
- 			metadata.skewx::numeric(16, 10) <> 0::numeric(16, 10) OR 
+ 			metadata.skewx::numeric(16, 10) <> 0::numeric(16, 10) OR
 @@ -1623,8 +1635,11 @@ CREATE OR REPLACE FUNCTION st_colormap(
  		_ismap boolean;
  		_colormap text;
@@ -9777,7 +9777,7 @@ index 65b580d..47c4f28 100644
  	BEGIN
  		_ismap := TRUE;
 +		_method := method; -- DEFAULT must be CONSTANT in plpgsql (not in plr/pljava) in GPDB
- 
+
  		-- clean colormap to see what it is
  		_colormap := split_part(colormap, E'\n', 1);
 @@ -1639,22 +1654,22 @@ CREATE OR REPLACE FUNCTION st_colormap(
@@ -9793,7 +9793,7 @@ index 65b580d..47c4f28 100644
  					_colormap := '
  100%   0
    0% 254
-   nv 255 
+   nv 255
  					';
 -				WHEN 'pseudocolor' THEN
 +				ELSIF _keyword = 'pseudocolor' THEN
@@ -9824,12 +9824,12 @@ index 65b580d..47c4f28 100644
 -			END CASE;
 +			END IF;
  		END IF;
- 
+
 -		RETURN _st_colormap($1, $2, _colormap, $4);
 +		RETURN _st_colormap($1, $2, _colormap, _method);
  	END;
  	$$ LANGUAGE 'plpgsql' IMMUTABLE STRICT;
- 
+
 @@ -2434,7 +2449,7 @@ CREATE OR REPLACE FUNCTION st_resize(
  				BEGIN
  					wh[i] := (regexp_matches(wh[i], E'^(\\d*.?\\d*)%{1}$'))[1];
@@ -9837,14 +9837,14 @@ index 65b580d..47c4f28 100644
 -						RAISE invalid_parameter_value;
 +						RAISE EXCEPTION 'Invalid percentage value provided for width/height';
  					END IF;
- 
+
  					whd[i] := wh[i]::double precision * 0.01;
 @@ -3581,13 +3596,15 @@ CREATE OR REPLACE FUNCTION _st_slope4ma(value double precision[][][], pos intege
- 
+
  		_value double precision[][][];
  		ndims int;
 -	BEGIN
- 
+
 +		_user_prefer text;
 +	BEGIN
  		ndims := array_ndims(value);
@@ -9859,7 +9859,7 @@ index 65b580d..47c4f28 100644
  			_value := value;
 @@ -3645,17 +3662,17 @@ CREATE OR REPLACE FUNCTION _st_slope4ma(value double precision[][][], pos intege
  		slope := sqrt(dz_dx * dz_dx + dz_dy * dz_dy) / (8 * _scale);
- 
+
  		-- output depends on user preference
 -		CASE substring(upper(trim(leading from _units)) for 3)
 -			-- percentages
@@ -9883,11 +9883,11 @@ index 65b580d..47c4f28 100644
 +		ELSE
 +			slope := degrees(atan(slope));
 +		END IF;
- 
+
  		RETURN slope;
  	END;
 @@ -3754,12 +3771,14 @@ CREATE OR REPLACE FUNCTION _st_aspect4ma(value double precision[][][], pos integ
- 
+
  		_value double precision[][][];
  		ndims int;
 +
@@ -9904,7 +9904,7 @@ index 65b580d..47c4f28 100644
  			_value := value;
 @@ -3832,14 +3851,14 @@ CREATE OR REPLACE FUNCTION _st_aspect4ma(value double precision[][][], pos integ
  		END IF;
- 
+
  		-- output depends on user preference
 -		CASE substring(upper(trim(leading from _units)) for 3)
 -			-- radians
@@ -9922,7 +9922,7 @@ index 65b580d..47c4f28 100644
 +		ELSE
 +			RETURN degrees(aspect);
 +		END IF;
- 
+
  	END;
  	$$ LANGUAGE 'plpgsql' IMMUTABLE;
 @@ -4153,7 +4172,7 @@ CREATE OR REPLACE FUNCTION _st_tpi4ma(value double precision[][][], pos integer[
@@ -9936,7 +9936,7 @@ index 65b580d..47c4f28 100644
  			_value := value;
 @@ -5764,7 +5783,7 @@ CREATE OR REPLACE FUNCTION _st_samealignment_finalfn(agg agg_samealignment)
  	LANGUAGE 'sql' IMMUTABLE STRICT;
- 
+
  -- Availability: 2.1.0
 -CREATE AGGREGATE st_samealignment(raster) (
 +CREATE ORDERED AGGREGATE st_samealignment(raster) (
@@ -9945,7 +9945,7 @@ index 65b580d..47c4f28 100644
  	FINALFUNC = _st_samealignment_finalfn
 @@ -6362,22 +6381,21 @@ CREATE OR REPLACE FUNCTION st_intersection(
  		_returnband := upper(returnband);
- 
+
  		rtn := NULL;
 -		CASE
 -			WHEN _returnband = 'BAND1' THEN
@@ -9978,12 +9978,12 @@ index 65b580d..47c4f28 100644
 +			RAISE EXCEPTION 'Unknown value provided for returnband: %', returnband;
 +			RETURN NULL;
 +		END IF;
- 
+
  		RETURN rtn;
  	END;
 @@ -6470,7 +6488,7 @@ CREATE OR REPLACE FUNCTION _st_union_transfn(internal, raster, unionarg[])
  	LANGUAGE 'c' IMMUTABLE;
- 
+
  -- Availability: 2.1.0
 -CREATE AGGREGATE st_union(raster, unionarg[]) (
 +CREATE ORDERED AGGREGATE st_union(raster, unionarg[]) (
@@ -9991,7 +9991,7 @@ index 65b580d..47c4f28 100644
  	STYPE = internal,
  	FINALFUNC = _st_union_finalfn
 @@ -6483,7 +6501,7 @@ CREATE OR REPLACE FUNCTION _st_union_transfn(internal, raster, integer, text)
- 
+
  -- Availability: 2.0.0
  -- Changed: 2.1.0 changed definition
 -CREATE AGGREGATE st_union(raster, integer, text) (
@@ -10000,7 +10000,7 @@ index 65b580d..47c4f28 100644
  	STYPE = internal,
  	FINALFUNC = _st_union_finalfn
 @@ -6496,7 +6514,7 @@ CREATE OR REPLACE FUNCTION _st_union_transfn(internal, raster, integer)
- 
+
  -- Availability: 2.0.0
  -- Changed: 2.1.0 changed definition
 -CREATE AGGREGATE st_union(raster, integer) (
@@ -10009,7 +10009,7 @@ index 65b580d..47c4f28 100644
  	STYPE = internal,
  	FINALFUNC = _st_union_finalfn
 @@ -6509,7 +6527,7 @@ CREATE OR REPLACE FUNCTION _st_union_transfn(internal, raster)
- 
+
  -- Availability: 2.0.0
  -- Changed: 2.1.0 changed definition
 -CREATE AGGREGATE st_union(raster) (
@@ -10018,7 +10018,7 @@ index 65b580d..47c4f28 100644
  	STYPE = internal,
  	FINALFUNC = _st_union_finalfn
 @@ -6522,7 +6540,7 @@ CREATE OR REPLACE FUNCTION _st_union_transfn(internal, raster, text)
- 
+
  -- Availability: 2.0.0
  -- Changed: 2.1.0 changed definition
 -CREATE AGGREGATE st_union(raster, text) (
@@ -10056,10 +10056,10 @@ index 65b580d..47c4f28 100644
 +--			AND s.conexclop[1] = op.oid
 +			AND s.connamespace = op.oprnamespace
  			AND op.oprname = '=';
- 
- 		RETURN _drop_raster_constraint($1, $2, cn); 
+
+ 		RETURN _drop_raster_constraint($1, $2, cn);
 @@ -7347,8 +7373,13 @@ CREATE OR REPLACE FUNCTION _drop_raster_constraint_num_bands(rastschema name, ra
- 
+
  CREATE OR REPLACE FUNCTION _raster_constraint_info_pixel_types(rastschema name, rasttable name, rastcolumn name)
  	RETURNS text[] AS $$
 +--
@@ -10074,7 +10074,7 @@ index 65b580d..47c4f28 100644
  	WHERE n.nspname = $1
  		AND c.relname = $2
 @@ -7423,8 +7454,11 @@ CREATE OR REPLACE FUNCTION _drop_raster_constraint_pixel_types(rastschema name,
- 
+
  CREATE OR REPLACE FUNCTION _raster_constraint_info_nodata_values(rastschema name, rasttable name, rastcolumn name)
  	RETURNS double precision[] AS $$
 +--
@@ -10087,7 +10087,7 @@ index 65b580d..47c4f28 100644
  	WHERE n.nspname = $1
  		AND c.relname = $2
 @@ -7503,8 +7537,11 @@ CREATE OR REPLACE FUNCTION _drop_raster_constraint_nodata_values(rastschema name
- 
+
  CREATE OR REPLACE FUNCTION _raster_constraint_info_out_db(rastschema name, rasttable name, rastcolumn name)
  	RETURNS boolean[] AS $$
 +--
@@ -10101,7 +10101,7 @@ index 65b580d..47c4f28 100644
  		AND c.relname = $2
 @@ -7645,61 +7682,61 @@ CREATE OR REPLACE FUNCTION AddRasterConstraints (
  			kw := trim(both from lower(constraints[x]));
- 
+
  			BEGIN
 -				CASE
 -					WHEN kw = 'srid' THEN
@@ -10181,11 +10181,11 @@ index 65b580d..47c4f28 100644
 -				END CASE;
 +				END IF;
  			END;
- 
+
  			IF rtn IS FALSE THEN
 @@ -7889,36 +7926,36 @@ CREATE OR REPLACE FUNCTION DropRasterConstraints (
  			kw := trim(both from lower(constraints[x]));
- 
+
  			BEGIN
 -				CASE
 -					WHEN kw = 'srid' THEN
@@ -10228,7 +10228,7 @@ index 65b580d..47c4f28 100644
 -					WHEN kw IN ('regular_blocking', 'regularblocking') THEN
 +					ELSIF kw IN ('regular_blocking', 'regularblocking') THEN
  						rtn := _drop_raster_constraint_regular_blocking(schema, $2, $3);
- 
+
  						RAISE NOTICE 'Dropping coverage tile constraint required for regular blocking';
 @@ -7928,25 +7965,25 @@ CREATE OR REPLACE FUNCTION DropRasterConstraints (
  							RAISE NOTICE 'Dropping spatially unique constraint required for regular blocking';
@@ -10260,12 +10260,12 @@ index 65b580d..47c4f28 100644
 -				END CASE;
 +				END IF;
  			END;
- 
+
  			IF rtn IS FALSE THEN
 @@ -8120,6 +8157,32 @@ CREATE OR REPLACE FUNCTION _overview_constraint(ov raster, factor integer, refsc
  	LANGUAGE 'sql' STABLE
  	COST 100;
- 
+
 +-- We re-write this function, otherwise Greenplum will complain:
 +--		function cannot execute on segment because it accesses relation "public.raster_columns"
 +CREATE OR REPLACE FUNCTION _overview_constraint(ov raster, factor integer, refschema name, reftable name, refcolumn name)
@@ -10301,21 +10301,21 @@ index 53ca14e..06c9fef 100644
 +++ b/postgis/build/postgis-2.1.5/raster/test/regress/bug_test_car5.sql
 @@ -42,7 +42,7 @@ INSERT INTO car5 (rid,rast) VALUES (2, ('01000003009A9999999999A93F9A9999999999A
  INSERT INTO car5 (rid,rast) VALUES (3, ('01000003009A9999999999A93F9A9999999999A9BF000000E02B274A41000000007719564100000000000000000000000000000000FFFFFFFF050005000400FDFEFDFEFEFDFEFEFDF9FAFEFEFCF9FBFDFEFEFDFCFAFEFEFE04004E627AADD16076B4F9FE6370A9F5FE59637AB0E54F58617087040046566487A1506CA2E3FA5A6CAFFBFE4D566DA4CB3E454C5665')::raster );
- 
+
  -- Run test
 -SELECT rid, st_width(rast), st_height(rast), st_bandpixeltype(rast,1), st_bandpixeltype(rast,2), st_bandpixeltype(rast,3) FROM car5;
 +SELECT rid, st_width(rast), st_height(rast), st_bandpixeltype(rast,1), st_bandpixeltype(rast,2), st_bandpixeltype(rast,3) FROM car5 order by rid;
- 
+
  DROP TABLE car5;
 
-diff --git a/postgis/build/postgis-2.1.5/raster/test/regress/check_raster_columns.sql b/postgis/build/postgis-2.1.5/raster/test/regress/check_raster_columns.sql 
+diff --git a/postgis/build/postgis-2.1.5/raster/test/regress/check_raster_columns.sql b/postgis/build/postgis-2.1.5/raster/test/regress/check_raster_columns.sql
 index 40d4377..17897a6 100644
 --- a/postgis/build/postgis-2.1.5/raster/test/regress/check_raster_columns.sql
 +++ b/postgis/build/postgis-2.1.5/raster/test/regress/check_raster_columns.sql
 @@ -99,6 +99,12 @@ DELETE FROM test_raster_columns;
- 
+
  -- regular_blocking
- 
+
 +--	NOTICE:
 +--		Greenplum doesn't support EXCLUDE (exclusion constraint) now,
 +--		so we can't claim EXLUCDE(UNIQUE) on UDTs, which is invoked in
@@ -10326,41 +10326,41 @@ index 40d4377..17897a6 100644
  SELECT make_test_raster(2, 3, 3, 3, 0);
  SELECT make_test_raster(3, 3, 3, 0, 3);
 @@ -106,7 +112,14 @@ SELECT make_test_raster(4, 3, 3, 3, 3);
- 
+
  SELECT AddRasterConstraints(current_schema(), 'test_raster_columns', 'rast'::name);
  SELECT AddRasterConstraints(current_schema(), 'test_raster_columns', 'rast'::name, 'regular_blocking');
 -SELECT r_table_name, r_raster_column, srid, scale_x, scale_y, blocksize_x, blocksize_y, same_alignment, regular_blocking, num_bands, pixel_types, nodata_values, ST_AsEWKT(extent) FROM raster_columns WHERE r_table_name = 'test_raster_columns';
 +
 +--The textual result of ST_Union() relys on the sort of inputs, so we try to verifty it in semantic domain
-+SELECT r_table_name, r_raster_column, srid, scale_x, scale_y, blocksize_x, blocksize_y, same_alignment, regular_blocking, num_bands, pixel_types, nodata_values, 
++SELECT r_table_name, r_raster_column, srid, scale_x, scale_y, blocksize_x, blocksize_y, same_alignment, regular_blocking, num_bands, pixel_types, nodata_values,
 +	CASE WHEN ST_Equals(extent,'POLYGON((3 0,0 0,0 3,0 6,3 6,6 6,6 3,6 0,3 0))'::geometry)
 +		THEN 'POLYGON((3 0,0 0,0 3,0 6,3 6,6 6,6 3,6 0,3 0))'
 +		ELSE ST_AsEWKT(extent)
 +	END
 +FROM raster_columns WHERE r_table_name = 'test_raster_columns';
- 
- -- spatially unique, this should fail 
+
+ -- spatially unique, this should fail
  SELECT make_test_raster(0, 3, 3, 0, 0);
 @@ -115,7 +128,14 @@ SELECT make_test_raster(0, 3, 3, 0, 0);
  SELECT make_test_raster(0, 3, 3, 1, 0);
- 
+
  SELECT DropRasterConstraints(current_schema(), 'test_raster_columns', 'rast'::name, 'regular_blocking');
 -SELECT r_table_name, r_raster_column, srid, scale_x, scale_y, blocksize_x, blocksize_y, same_alignment, regular_blocking, num_bands, pixel_types, nodata_values, ST_AsEWKT(extent) FROM raster_columns WHERE r_table_name = 'test_raster_columns';
 +
 +--The textual result of ST_Union() relays on the sort of inputs, so we try to verify it in semantic domain
-+SELECT r_table_name, r_raster_column, srid, scale_x, scale_y, blocksize_x, blocksize_y, same_alignment, regular_blocking, num_bands, pixel_types, nodata_values, 
++SELECT r_table_name, r_raster_column, srid, scale_x, scale_y, blocksize_x, blocksize_y, same_alignment, regular_blocking, num_bands, pixel_types, nodata_values,
 +	CASE WHEN ST_Equals(extent,'POLYGON((3 0,0 0,0 3,0 6,3 6,6 6,6 3,6 0,3 0))'::geometry)
 +		THEN 'POLYGON((3 0,0 0,0 3,0 6,3 6,6 6,6 3,6 0,3 0))'
 +		ELSE ST_AsEWKT(extent)
 +	END
 +FROM raster_columns WHERE r_table_name = 'test_raster_columns';
- 
+
  -- ticket #2215
  CREATE TABLE test_raster_columns_2 AS
 @@ -124,5 +144,8 @@ SELECT AddRasterConstraints(current_schema(), 'test_raster_columns_2', 'rast'::n
  SELECT AddRasterConstraints(current_schema(), 'test_raster_columns', 'rast'::name, 'regular_blocking');
  DROP TABLE IF EXISTS test_raster_columns_2;
- 
+
 +
 +
  DROP FUNCTION make_test_raster(integer, integer, integer, double precision, double precision, double precision, double precision, double precision, double precision);
@@ -10401,10 +10401,10 @@ index 0833279..872382e 100644
 @@ -22,10 +22,10 @@ CREATE OR REPLACE FUNCTION make_value_array(
  	BEGIN
  		value := start_val;
- 
+
 -		values := array_fill(NULL::double precision, ARRAY[1, columns, rows]);
 +		values := array_fill(NULL::double precision, ARRAY[1, columns, nrows]);
- 
+
  		FOR y IN 1..columns LOOP
 -			FOR x IN 1..rows LOOP
 +			FOR x IN 1..nrows LOOP
@@ -10423,7 +10423,7 @@ index 548cc97..feea694 100644
 -) foo;
 +) foo
 +ORDER BY rid;
- 
+
  DELETE FROM "spatial_ref_sys" WHERE srid = 992163;
  DELETE FROM "spatial_ref_sys" WHERE srid = 993309;
 diff --git a/postgis/build/postgis-2.1.5/raster/test/regress/rt_clip.sql b/postgis/build/postgis-2.1.5/raster/test/regress/rt_clip.sql
@@ -10437,7 +10437,7 @@ index d50eb31..d45f347 100644
 -) AS r;
 +) AS r
 +ORDER BY 1, 2, 3;
- 
+
  -- Display the pixels and the values of the resulting rasters (raster 1)
  SELECT
 @@ -134,7 +135,7 @@ FROM (SELECT tid, rid, gid, ST_PixelAsPolygons(rast) gvxy
@@ -10446,7 +10446,7 @@ index d50eb31..d45f347 100644
  ) foo
 -ORDER BY 1, 2, 3, 4, 5, 7;
 +ORDER BY 1, 2, 3, 4, 5, 6;
- 
+
  -- Display the pixels and the values of the resulting rasters (raster 2, 3 bands)
  SELECT
 diff --git a/postgis/build/postgis-2.1.5/raster/test/regress/rt_colormap.sql b/postgis/build/postgis-2.1.5/raster/test/regress/rt_colormap.sql
@@ -10471,7 +10471,7 @@ index 2a5841e..5fe3d68 100644
 +	rast raster,
 +    sid integer DEFAULT 1 --segment id to generate sorted NOTICE msgs.
 +) DISTRIBUTED BY (sid);
- 
+
  INSERT INTO raster_colormap_in
  SELECT
 @@ -127,7 +130,7 @@ SELECT
@@ -10480,7 +10480,7 @@ index 2a5841e..5fe3d68 100644
  FROM raster_colormap_out
 -ORDER BY 1, 2;
 +ORDER BY 1, 2, 3;
- 
+
  DROP TABLE IF EXISTS raster_colormap_in;
  DROP TABLE IF EXISTS raster_colormap_out;
 diff --git a/postgis/build/postgis-2.1.5/raster/test/regress/rt_colormap_expected b/postgis/build/postgis-2.1.5/raster/test/regress/rt_colormap_expected
@@ -10539,11 +10539,11 @@ index a305bd8..f51ddf7 100644
  			nband := ST_NumBands(rast) + 1;
  			_rast := ST_AddBand(rast, nband, pixtype, 0, nodataval);
  		END IF;
- 
+
  		value := start_val;
 -		values := array_fill(NULL::double precision, ARRAY[columns, rows]);
 +		values := array_fill(NULL::double precision, ARRAY[columns, nrows]);
- 
+
  		FOR y IN 1..columns LOOP
 -			FOR x IN 1..rows LOOP
 +			FOR x IN 1..nrows LOOP
@@ -10556,7 +10556,7 @@ index a305bd8..f51ddf7 100644
  FROM raster_dumpvalues
 -ORDER BY rid;
 +ORDER BY 1, 2;
- 
+
  SELECT
  	rid,
  	(ST_DumpValues(rast, ARRAY[3,2,1])).*
@@ -10564,9 +10564,9 @@ index a305bd8..f51ddf7 100644
  WHERE rid > 20
 -ORDER BY rid;
 +ORDER BY 1, 2 DESC;
- 
+
  DROP TABLE IF EXISTS raster_dumpvalues;
- 
+
 diff --git a/postgis/build/postgis-2.1.5/raster/test/regress/rt_elevation_functions.sql b/postgis/build/postgis-2.1.5/raster/test/regress/rt_elevation_functions.sql
 index 7780fea..4e5329f 100644
 --- a/postgis/build/postgis-2.1.5/raster/test/regress/rt_elevation_functions.sql
@@ -10662,7 +10662,7 @@ index 7780fea..4e5329f 100644
 -					AND t2.rid != 0
 -			GROUP BY t1.rid
 -		)
-+	UNION ALL 
++	UNION ALL
  		SELECT
  			t1.rid,
  			'aspect',
@@ -10719,7 +10719,7 @@ index 7780fea..4e5329f 100644
 -END IF;
 +	;
  END $$;
- 
+
 -WITH foo AS (
 -	SELECT
 -		rid,
@@ -10742,7 +10742,7 @@ index 7780fea..4e5329f 100644
 +    FROM raster_elevation_out
 +) foo
  ORDER BY 2, 1, 4, 3;
- 
+
  DROP TABLE IF EXISTS raster_elevation_out;
 @@ -299,8 +247,8 @@ CREATE TABLE raster_value_arrays (
  	val double precision[][]
@@ -10758,10 +10758,10 @@ index 7780fea..4e5329f 100644
 @@ -317,10 +265,10 @@ CREATE OR REPLACE FUNCTION make_value_array(
  	BEGIN
  		value := start_val;
- 
+
 -		values := array_fill(NULL::double precision, ARRAY[1, columns, rows]);
 +		values := array_fill(NULL::double precision, ARRAY[1, ncolumns, nrows]);
- 
+
 -		FOR y IN 1..columns LOOP
 -			FOR x IN 1..rows LOOP
 +		FOR y IN 1..ncolumns LOOP
@@ -10779,7 +10779,7 @@ index 14b7a2f..375ede7 100644
  	ORDER BY rid
 -) foo;
 +) foo ORDER BY rid;
- 
+
  DROP TABLE raster_gdalwarp_src;
  DROP TABLE raster_gdalwarp_dst;
 diff --git a/postgis/build/postgis-2.1.5/raster/test/regress/rt_geos_relationships.sql b/postgis/build/postgis-2.1.5/raster/test/regress/rt_geos_relationships.sql
@@ -10793,7 +10793,7 @@ index 10cb4d7..70ca25c 100644
 -WHERE r1.rid = 0;
 +WHERE r1.rid = 0
 +ORDER BY 2, 3;
- 
+
  SELECT
  	'1.2',
 @@ -200,7 +201,8 @@ SELECT
@@ -10803,7 +10803,7 @@ index 10cb4d7..70ca25c 100644
 -WHERE r1.rid = 0;
 +WHERE r1.rid = 0
 +ORDER BY 2, 3;
- 
+
  SELECT
  	'1.3',
 @@ -214,7 +216,8 @@ SELECT
@@ -10813,7 +10813,7 @@ index 10cb4d7..70ca25c 100644
 -WHERE r2.rid = 0;
 +WHERE r2.rid = 0
 +ORDER BY 2, 3;
- 
+
  SELECT
  	'1.4',
 @@ -228,7 +231,8 @@ SELECT
@@ -10823,8 +10823,8 @@ index 10cb4d7..70ca25c 100644
 -WHERE r2.rid = 0;
 +WHERE r2.rid = 0
 +ORDER BY 2, 3;
- 
- 
+
+
  SELECT
 @@ -239,7 +243,8 @@ SELECT
  	ST_DWithin(r1.rast, NULL, r2.rast, NULL, NULL)
@@ -10833,7 +10833,7 @@ index 10cb4d7..70ca25c 100644
 -WHERE r1.rid = 0;
 +WHERE r1.rid = 0
 +ORDER BY 2, 3;
- 
+
  SELECT
  	'2.2',
 @@ -249,7 +254,8 @@ SELECT
@@ -10843,7 +10843,7 @@ index 10cb4d7..70ca25c 100644
 -WHERE r1.rid = 0;
 +WHERE r1.rid = 0
 +ORDER BY 2, 3;
- 
+
  SELECT
  	'2.3',
 @@ -259,7 +265,8 @@ SELECT
@@ -10853,7 +10853,7 @@ index 10cb4d7..70ca25c 100644
 -WHERE r1.rid = 0;
 +WHERE r1.rid = 0
 +ORDER BY 2, 3;
- 
+
  SELECT
  	'2.4',
 @@ -269,6 +276,7 @@ SELECT
@@ -10863,7 +10863,7 @@ index 10cb4d7..70ca25c 100644
 -WHERE r1.rid = 0;
 +WHERE r1.rid = 0
 +ORDER BY 2, 3;
- 
+
  DROP TABLE IF EXISTS raster_geos_rast;
 diff --git a/postgis/build/postgis-2.1.5/raster/test/regress/rt_intersection.sql b/postgis/build/postgis-2.1.5/raster/test/regress/rt_intersection.sql
 index 7e636d8..c9e63ed 100644
@@ -10875,8 +10875,8 @@ index 7e636d8..c9e63ed 100644
  	FROM raster_intersection_out
 -) AS r;
 +) AS r
-+ORDER BY rid1, rid2, upperleftx, upperlefty, width, height, numbands, firstvalue, lastvalue; 
- 
++ORDER BY rid1, rid2, upperleftx, upperlefty, width, height, numbands, firstvalue, lastvalue;
+
  -- Display the pixels and the values of the resulting rasters
  SELECT
 diff --git a/postgis/build/postgis-2.1.5/raster/test/regress/rt_intersection_expected b/postgis/build/postgis-2.1.5/raster/test/regress/rt_intersection_expected
@@ -10935,7 +10935,7 @@ index 3458b59..a989d6b 100644
 -WHERE r1.rid = 0;
 +WHERE r1.rid = 0
 +ORDER BY 2, 3;
- 
+
  SELECT
  	'1.2',
 @@ -174,7 +175,8 @@ SELECT
@@ -10945,7 +10945,7 @@ index 3458b59..a989d6b 100644
 -WHERE r1.rid = 0;
 +WHERE r1.rid = 0
 +ORDER BY 2, 3;
- 
+
  -- point
  INSERT INTO raster_intersects_geom VALUES (
 @@ -380,7 +382,8 @@ SELECT
@@ -10955,7 +10955,7 @@ index 3458b59..a989d6b 100644
 -WHERE r1.rid = 0;
 +WHERE r1.rid = 0
 +ORDER BY 2, 3;
- 
+
  SELECT
  	'2.2',
 @@ -390,7 +393,8 @@ SELECT
@@ -10965,7 +10965,7 @@ index 3458b59..a989d6b 100644
 -WHERE r1.rid = 0;
 +WHERE r1.rid = 0
 +ORDER BY 2, 3;
- 
+
  SELECT
  	'2.3',
 @@ -400,7 +404,8 @@ SELECT
@@ -10975,7 +10975,7 @@ index 3458b59..a989d6b 100644
 -WHERE r1.rid = 2;
 +WHERE r1.rid = 2
 +ORDER BY 2, 3;
- 
+
  SELECT
  	'2.4',
 @@ -410,7 +415,8 @@ SELECT
@@ -10985,7 +10985,7 @@ index 3458b59..a989d6b 100644
 -WHERE r1.rid = 2;
 +WHERE r1.rid = 2
 +ORDER BY 2, 3;
- 
+
  SELECT
  	'2.5',
 @@ -420,7 +426,8 @@ SELECT
@@ -10995,7 +10995,7 @@ index 3458b59..a989d6b 100644
 -WHERE r1.rid = 0;
 +WHERE r1.rid = 0
 +ORDER BY 2, 3;
- 
+
  SELECT
  	'2.6',
 @@ -430,7 +437,8 @@ SELECT
@@ -11005,7 +11005,7 @@ index 3458b59..a989d6b 100644
 -WHERE r1.rid = 2;
 +WHERE r1.rid = 2
 +ORDER BY 2, 3;
- 
+
  DROP TABLE IF EXISTS raster_intersects_rast;
  DROP TABLE IF EXISTS raster_intersects_geom;
 diff --git a/postgis/build/postgis-2.1.5/raster/test/regress/rt_invdistweight4ma.sql b/postgis/build/postgis-2.1.5/raster/test/regress/rt_invdistweight4ma.sql
@@ -11024,10 +11024,10 @@ index 8573d70..33a3407 100644
 @@ -22,10 +22,10 @@ CREATE OR REPLACE FUNCTION make_value_array(
  	BEGIN
  		value := start_val;
- 
+
 -		values := array_fill(NULL::double precision, ARRAY[1, columns, rows]);
 +		values := array_fill(NULL::double precision, ARRAY[1, columns, nrows]);
- 
+
  		FOR y IN 1..columns LOOP
 -			FOR x IN 1..rows LOOP
 +			FOR x IN 1..nrows LOOP
@@ -11039,21 +11039,21 @@ index f672a20..496448a 100644
 --- a/postgis/build/postgis-2.1.5/raster/test/regress/rt_io.sql
 +++ b/postgis/build/postgis-2.1.5/raster/test/regress/rt_io.sql
 @@ -660,7 +660,7 @@ VALUES ( 9, '1x1 single band (32BUI) no transform',
- 
+
  -- 1x1, single band of type 32BF, no transform, scale 1:1
  INSERT INTO rt_io_test (id, name, hexwkb_ndr, hexwkb_xdr)
 -VALUES ( 11, '1x1 single band (32BF) no transform',
 +VALUES ( 10, '1x1 single band (32BF) no transform',
  (
  '01' -- little endian (uint8 ndr)
- || 
+ ||
 @@ -865,7 +865,7 @@ VALUES ( 12, '1x1 single band (64BF external) no transform',
  SELECT name,
      hexwkb_ndr::raster::text = hexwkb_ndr or hexwkb_ndr::raster::text = hexwkb_xdr as ndr_io,
      hexwkb_xdr::raster::text = hexwkb_ndr or hexwkb_xdr::raster::text = hexwkb_xdr as xdr_io
 -FROM rt_io_test;
 +FROM rt_io_test order by id;
- 
+
  -- Out of range value for 1BB pixeltype
  SELECT (
 diff --git a/postgis/build/postgis-2.1.5/raster/test/regress/rt_mapalgebra.sql b/postgis/build/postgis-2.1.5/raster/test/regress/rt_mapalgebra.sql
@@ -11069,7 +11069,7 @@ index edb8e80..3d86f79 100644
 +	rast raster,
 +	sid integer	DEFAULT 1 --segment id to generate sorted NOTICE msgs.
 +) DISTRIBUTED BY (sid);
- 
+
  INSERT INTO raster_nmapalgebra_in
  	SELECT 0, NULL::raster AS rast UNION ALL
 @@ -58,7 +59,8 @@ SELECT
@@ -11079,7 +11079,7 @@ index edb8e80..3d86f79 100644
 -WHERE rid IN (2,3,4);
 +WHERE rid IN (2,3,4)
 +ORDER BY rid;
- 
+
  SELECT
  	rid,
 @@ -74,7 +76,8 @@ SELECT
@@ -11089,7 +11089,7 @@ index edb8e80..3d86f79 100644
 -WHERE rid IN (3,4);
 +WHERE rid IN (3,4)
 +ORDER BY rid;
- 
+
  WITH foo AS (
  	SELECT
 @@ -94,7 +97,8 @@ SELECT
@@ -11099,7 +11099,7 @@ index edb8e80..3d86f79 100644
 -FROM foo;
 +FROM foo
 +ORDER BY rid;
- 
+
  INSERT INTO raster_nmapalgebra_in
  	SELECT 10, ST_AddBand(ST_MakeEmptyRaster(2, 2, 0, 0, 1, -1, 0, 0, 0), 1, '16BUI', 1, 0) AS rast UNION ALL
 @@ -343,7 +347,8 @@ SELECT
@@ -11109,7 +11109,7 @@ index edb8e80..3d86f79 100644
 -FROM foo;
 +FROM foo
 +ORDER BY 1,2;
- 
+
  WITH foo AS (
  	SELECT
 @@ -363,7 +368,8 @@ SELECT
@@ -11119,7 +11119,7 @@ index edb8e80..3d86f79 100644
 -FROM foo;
 +FROM foo
 +ORDER BY 1,2;
- 
+
  WITH foo AS (
  	SELECT
 @@ -386,7 +392,8 @@ SELECT
@@ -11129,7 +11129,7 @@ index edb8e80..3d86f79 100644
 -FROM foo;
 +FROM foo
 +ORDER BY 1,2;
- 
+
  WITH foo AS (
  	SELECT
 @@ -409,7 +416,8 @@ SELECT
@@ -11139,7 +11139,7 @@ index edb8e80..3d86f79 100644
 -FROM foo;
 +FROM foo
 +ORDER BY 1,2;
- 
+
  WITH foo AS (
  	SELECT
 @@ -436,7 +444,8 @@ SELECT
@@ -11149,7 +11149,7 @@ index edb8e80..3d86f79 100644
 -FROM foo;
 +FROM foo
 +ORDER BY 1,2,3;
- 
+
  WITH foo AS (
  	SELECT
 @@ -463,7 +472,8 @@ SELECT
@@ -11159,7 +11159,7 @@ index edb8e80..3d86f79 100644
 -FROM foo;
 +FROM foo
 +ORDER BY 1,2,3;
- 
+
  WITH foo AS (
  	SELECT
 @@ -490,7 +500,8 @@ SELECT
@@ -11169,7 +11169,7 @@ index edb8e80..3d86f79 100644
 -FROM foo;
 +FROM foo
 +ORDER BY 1,2,3;
- 
+
  WITH foo AS (
  	SELECT
 @@ -517,7 +528,8 @@ SELECT
@@ -11179,7 +11179,7 @@ index edb8e80..3d86f79 100644
 -FROM foo;
 +FROM foo
 +ORDER BY 1,2,3;
- 
+
  WITH foo AS (
  	SELECT
 @@ -541,7 +553,8 @@ SELECT
@@ -11189,7 +11189,7 @@ index edb8e80..3d86f79 100644
 -FROM foo;
 +FROM foo
 +ORDER BY 1,2,3;
- 
+
  INSERT INTO raster_nmapalgebra_in
  	SELECT 30, ST_AddBand(ST_AddBand(ST_AddBand(ST_MakeEmptyRaster(2, 2, 0, 0, 1, -1, 0, 0, 0), 1, '16BUI', 1, 0), 2, '8BUI', 10, 0), 3, '32BUI', 100, 0) AS rast UNION ALL
 @@ -562,7 +575,8 @@ SELECT
@@ -11199,7 +11199,7 @@ index edb8e80..3d86f79 100644
 -FROM foo;
 +FROM foo
 +ORDER BY rid;
- 
+
  WITH foo AS (
  	SELECT
 @@ -578,7 +592,8 @@ SELECT
@@ -11209,7 +11209,7 @@ index edb8e80..3d86f79 100644
 -FROM foo;
 +FROM foo
 +ORDER BY rid;
- 
+
  WITH foo AS (
  	SELECT
 @@ -595,7 +610,8 @@ SELECT
@@ -11219,7 +11219,7 @@ index edb8e80..3d86f79 100644
 -FROM foo;
 +FROM foo
 +ORDER BY rid;
- 
+
  WITH foo AS (
  	SELECT
 @@ -616,7 +632,8 @@ SELECT
@@ -11229,7 +11229,7 @@ index edb8e80..3d86f79 100644
 -FROM foo;
 +FROM foo
 +ORDER BY 1,2;
- 
+
  WITH foo AS (
  	SELECT
 @@ -632,7 +649,8 @@ SELECT
@@ -11239,7 +11239,7 @@ index edb8e80..3d86f79 100644
 -FROM foo;
 +FROM foo
 +ORDER BY rid;
- 
+
  WITH foo AS (
  	SELECT
 @@ -648,7 +666,8 @@ SELECT
@@ -11249,7 +11249,7 @@ index edb8e80..3d86f79 100644
 -FROM foo;
 +FROM foo
 +ORDER BY rid;
- 
+
  -- Ticket #2803
  -- http://trac.osgeo.org/postgis/ticket/2803
 @@ -695,7 +714,8 @@ SELECT
@@ -11259,7 +11259,7 @@ index edb8e80..3d86f79 100644
 -WHERE rid IN (2);
 +WHERE rid IN (2)
 +ORDER BY rid;
- 
+
  DROP FUNCTION IF EXISTS raster_nmapalgebra_test(double precision[], int[], text[]);
  DROP FUNCTION IF EXISTS raster_nmapalgebra_test_bad_return(double precision[], int[], text[]);
 diff --git a/postgis/build/postgis-2.1.5/raster/test/regress/rt_mapalgebra_expr.sql b/postgis/build/postgis-2.1.5/raster/test/regress/rt_mapalgebra_expr.sql
@@ -11273,7 +11273,7 @@ index b12b975..2606dae 100644
 -) AS r;
 +) AS r
 +ORDER BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11,14,15,16;
- 
+
  DROP TABLE IF EXISTS raster_mapalgebra;
  DROP TABLE IF EXISTS raster_mapalgebra_out;
 diff --git a/postgis/build/postgis-2.1.5/raster/test/regress/rt_mapalgebra_expr_expected b/postgis/build/postgis-2.1.5/raster/test/regress/rt_mapalgebra_expr_expected
@@ -11516,9 +11516,9 @@ index ffdb6ca..530703e 100644
  		ST_Value(rast, 1, ST_Width(rast), ST_Height(rast)) AS lastvalue
  	FROM raster_mapalgebra_out
 -) AS r;
-+) AS r 
-+ORDER BY rid1, rid2, extent, firstvalue, lastvalue;  
- 
++) AS r
++ORDER BY rid1, rid2, extent, firstvalue, lastvalue;
+
  DROP TABLE IF EXISTS raster_mapalgebra;
  DROP TABLE IF EXISTS raster_mapalgebra_out;
 diff --git a/postgis/build/postgis-2.1.5/raster/test/regress/rt_mapalgebraexpr_2raster_expected b/postgis/build/postgis-2.1.5/raster/test/regress/rt_mapalgebraexpr_2raster_expected
@@ -11895,7 +11895,7 @@ index 7e5fb97..a5c149f 100644
  	BEGIN
 -		CASE
 -			WHEN rast1 IS NOT NULL AND rast2 IS NOT NULL THEN
-+		IF	
++		IF
 +			rast1 IS NOT NULL AND rast2 IS NOT NULL THEN
  				RETURN ((rast1 + rast2)/2.);
 -			WHEN rast1 IS NULL AND rast2 IS NULL THEN
@@ -11908,7 +11908,7 @@ index 7e5fb97..a5c149f 100644
  				RETURN rast1;
 -		END CASE;
 +		END IF;
- 
+
  		RETURN NULL;
  	END;
 @@ -105,14 +107,13 @@ CREATE OR REPLACE FUNCTION raster_mapalgebra_first(
@@ -11930,7 +11930,7 @@ index 7e5fb97..a5c149f 100644
 +		ELSE
 +			RETURN NULL;
 +		END IF;
- 
+
  		RETURN NULL;
  	END;
 @@ -127,14 +128,13 @@ CREATE OR REPLACE FUNCTION raster_mapalgebra_second(
@@ -11952,7 +11952,7 @@ index 7e5fb97..a5c149f 100644
 +		ELSE
 +			RETURN NULL;
 +		END IF;
- 
+
  		RETURN NULL;
  	END;
 @@ -333,7 +333,8 @@ FROM (
@@ -11962,7 +11962,7 @@ index 7e5fb97..a5c149f 100644
 -) AS r;
 +	order by 1, 2, 3
 +) AS r order by 1, 2, 3;
- 
+
  DROP FUNCTION IF EXISTS raster_mapalgebra_intersection(double precision, double precision, int[], VARIADIC text[]);
  DROP FUNCTION IF EXISTS raster_mapalgebra_union(double precision, double precision, VARIADIC text[]);
 diff --git a/postgis/build/postgis-2.1.5/raster/test/regress/rt_mapalgebrafct_2raster_expected b/postgis/build/postgis-2.1.5/raster/test/regress/rt_mapalgebrafct_2raster_expected
@@ -12356,7 +12356,7 @@ index 91e26d2..330e80e 100644
  	(ST_RasterToWorldCoord(rast, -1, 0)).*
 -FROM raster_raster2world;
 +FROM raster_raster2world order by rid;
- 
+
  SELECT
  	rid,
  	ST_RasterToWorldCoordX(rast, 1, 1)
@@ -12382,7 +12382,7 @@ index 91e26d2..330e80e 100644
  	ST_RasterToWorldCoordX(rast, -1, 0)
 -FROM raster_raster2world;
 +FROM raster_raster2world order by rid;
- 
+
  SELECT
  	rid,
  	ST_RasterToWorldCoordX(rast, 1)
@@ -12408,7 +12408,7 @@ index 91e26d2..330e80e 100644
  	ST_RasterToWorldCoordX(rast, -1)
 -FROM raster_raster2world;
 +FROM raster_raster2world order by rid;
- 
+
  SELECT
  	rid,
  	ST_RasterToWorldCoordY(rast, 1, 1)
@@ -12434,7 +12434,7 @@ index 91e26d2..330e80e 100644
  	ST_RasterToWorldCoordY(rast, -1, 0)
 -FROM raster_raster2world;
 +FROM raster_raster2world order by rid;
- 
+
  SELECT
  	rid,
  	ST_RasterToWorldCoordY(rast, 1)
@@ -12460,71 +12460,71 @@ index 91e26d2..330e80e 100644
  	ST_RasterToWorldCoordY(rast, -1)
 -FROM raster_raster2world;
 +FROM raster_raster2world order by rid;
- 
+
  DROP TABLE raster_raster2world;
 diff --git a/postgis/build/postgis-2.1.5/raster/test/regress/rt_rotation.sql b/postgis/build/postgis-2.1.5/raster/test/regress/rt_rotation.sql
 index eee5ec9..91d6216 100644
 --- a/postgis/build/postgis-2.1.5/raster/test/regress/rt_rotation.sql
 +++ b/postgis/build/postgis-2.1.5/raster/test/regress/rt_rotation.sql
 @@ -226,7 +226,7 @@ VALUES ( 5, '1x1, ip:7.5,2.5 scale:5,5 skew:3,7, srid:-1, width:1, height:1',
- 
+
  SELECT 'T1', id, name, skewx
      FROM rt_properties_test
 -    WHERE st_skewx(rast) != skewx;
 +    WHERE st_skewx(rast) != skewx order by id;
- 
+
  -----------------------------------------------------------------------
  -- st_skewy
 @@ -234,7 +234,7 @@ SELECT 'T1', id, name, skewx
- 
+
  SELECT 'T2', id, name, skewy
      FROM rt_properties_test
 -    WHERE st_skewy(rast) != skewy;
 +    WHERE st_skewy(rast) != skewy order by id;
- 
+
  -----------------------------------------------------------------------
  -- st_setrotation
 @@ -242,13 +242,13 @@ SELECT 'T2', id, name, skewy
- 
+
  SELECT 'T3', id, name, round(st_rotation(rast)*1000000000000) as rotation
      FROM rt_properties_test
 -    WHERE st_rotation(rast) != 0;
 +    WHERE st_rotation(rast) != 0 order by id;
- 
+
  INSERT INTO rt_properties_test
      (id, name, srid, width, height, scalex, scaley, ipx, ipy, skewx, skewy, rast)
      (SELECT id + 100, name, srid, width, height, scalex, scaley, ipx, ipy, skewx, skewy, st_setrotation(rast,0)
      FROM rt_properties_test
 -    WHERE st_rotation(rast) != 0);
 +    WHERE st_rotation(rast) != 0)  order by id;
- 
+
  UPDATE rt_properties_test
      SET scalex = round(st_scalex(rast)*1000000000000),
 @@ -261,7 +261,7 @@ UPDATE rt_properties_test
- 
+
  SELECT 'T4', id, scalex, scaley, abs(skewx), abs(skewy), st_rotation(rast)
      FROM rt_properties_test
 -    WHERE id > 100;
 +    WHERE id > 100  order by id;
- 
+
  UPDATE rt_properties_test
      SET rast = st_setrotation(rast,pi()/4)
 @@ -279,7 +279,7 @@ UPDATE rt_properties_test
- SELECT 'T5', id, scalex, scaley, skewx, skewy, 
+ SELECT 'T5', id, scalex, scaley, skewx, skewy,
      round(st_rotation(rast)*1000000000000)
      FROM rt_properties_test
 -    WHERE id > 100;
 +    WHERE id > 100 order by id;
- 
+
  UPDATE rt_properties_test
      SET rast = st_setrotation(rast,pi()/6)
 @@ -297,7 +297,7 @@ UPDATE rt_properties_test
- SELECT 'T6', id, scalex, scaley, skewx, skewy, 
+ SELECT 'T6', id, scalex, scaley, skewx, skewy,
      round(st_rotation(rast)*1000000000000)
      FROM rt_properties_test
 -    WHERE id > 100;
 +    WHERE id > 100 order by id;
- 
+
  DELETE FROM rt_properties_test
      WHERE id > 100;
 diff --git a/postgis/build/postgis-2.1.5/raster/test/regress/rt_setvalues_geomval.sql b/postgis/build/postgis-2.1.5/raster/test/regress/rt_setvalues_geomval.sql
@@ -12538,7 +12538,7 @@ index ac145e0..9ec5da3 100644
 -	AND t3.gid = 4;
 +	AND t3.gid = 4
 +ORDER BY 1, 2, 3;
- 
+
  WITH foo AS (
  	SELECT
 -		array_agg(gid) AS gid,
@@ -12553,7 +12553,7 @@ index ac145e0..9ec5da3 100644
 -CROSS JOIN foo t2;
 +CROSS JOIN foo t2
 +ORDER BY 1, 2;
- 
+
  WITH foo AS (
  	SELECT
 -		array_agg(gid) AS gid,
@@ -12568,7 +12568,7 @@ index ac145e0..9ec5da3 100644
 -CROSS JOIN foo t2;
 +CROSS JOIN foo t2
 +ORDER BY 1, 2;
- 
+
  DROP TABLE IF EXISTS raster_setvalues_rast;
  DROP TABLE IF EXISTS raster_setvalues_geom;
 diff --git a/postgis/build/postgis-2.1.5/raster/test/regress/rt_union.sql b/postgis/build/postgis-2.1.5/raster/test/regress/rt_union.sql
@@ -12582,14 +12582,14 @@ index 8b47e87..353a49e 100644
 -		ST_Union(rast, 1) AS rast
 +		ST_Union(rast, 1 order by rid) AS rast
  	FROM raster_union_in;
- 
+
  INSERT INTO raster_union_out
  	SELECT
  		'FIRST',
 -		ST_Union(rast, 1, 'FIRST') AS rast
 +		ST_Union(rast, 1, 'FIRST' order by rid) AS rast
  	FROM raster_union_in;
- 
+
  INSERT INTO raster_union_out
 @@ -96,13 +96,13 @@ INSERT INTO raster_union_in
  INSERT INTO raster_union_out
@@ -12598,14 +12598,14 @@ index 8b47e87..353a49e 100644
 -		ST_Union(rast, 1) AS rast
 +		ST_Union(rast, 1 order by rid) AS rast
  	FROM raster_union_in;
- 
+
  INSERT INTO raster_union_out
  	SELECT
  		'FIRST',
 -		ST_Union(rast, 1, 'FIRST') AS rast
 +		ST_Union(rast, 1, 'FIRST' order by rid) AS rast
  	FROM raster_union_in;
- 
+
  INSERT INTO raster_union_out
 @@ -165,13 +165,13 @@ INSERT INTO raster_union_in
  INSERT INTO raster_union_out
@@ -12614,14 +12614,14 @@ index 8b47e87..353a49e 100644
 -		ST_Union(rast, 2) AS rast
 +		ST_Union(rast, 2 order by rid) AS rast
  	FROM raster_union_in;
- 
+
  INSERT INTO raster_union_out
  	SELECT
  		'FIRST',
 -		ST_Union(rast, 2, 'FIRST') AS rast
 +		ST_Union(rast, 2, 'FIRST' order by rid) AS rast
  	FROM raster_union_in;
- 
+
  INSERT INTO raster_union_out
 @@ -234,7 +234,7 @@ INSERT INTO raster_union_in
  INSERT INTO raster_union_out
@@ -12630,7 +12630,7 @@ index 8b47e87..353a49e 100644
 -		ST_Union(rast, 1) AS rast
 +		ST_Union(rast, 1 order by rid) AS rast
  	FROM raster_union_in;
- 
+
  SELECT
 @@ -263,13 +263,13 @@ INSERT INTO raster_union_in
  INSERT INTO raster_union_out
@@ -12639,14 +12639,14 @@ index 8b47e87..353a49e 100644
 -		ST_Union(rast, ARRAY[ROW(1, 'LAST'), ROW(2, 'LAST')]::unionarg[]) AS rast
 +		ST_Union(rast, ARRAY[ROW(1, 'LAST'), ROW(2, 'LAST')]::unionarg[]  order by rid) AS rast
  	FROM raster_union_in;
- 
+
  INSERT INTO raster_union_out
  	SELECT
  		'FIRST',
 -		ST_Union(rast, ARRAY[ROW(1, 'FIRST'), ROW(2, 'FIRST')]::unionarg[]) AS rast
 +		ST_Union(rast, ARRAY[ROW(1, 'FIRST'), ROW(2, 'FIRST')]::unionarg[] order by rid) AS rast
  	FROM raster_union_in;
- 
+
  INSERT INTO raster_union_out
 @@ -350,19 +350,19 @@ INSERT INTO raster_union_in
  INSERT INTO raster_union_out
@@ -12655,21 +12655,21 @@ index 8b47e87..353a49e 100644
 -		ST_Union(rast) AS rast
 +		ST_Union(rast order by rid) AS rast
  	FROM raster_union_in;
- 
+
  INSERT INTO raster_union_out
  	SELECT
  		'LAST-2',
 -		ST_Union(rast, 'last') AS rast
 +		ST_Union(rast, 'last' order by rid) AS rast
  	FROM raster_union_in;
- 
+
  INSERT INTO raster_union_out
  	SELECT
  		'FIRST-2',
 -		ST_Union(rast, 'first') AS rast
 +		ST_Union(rast, 'first' order by rid) AS rast
  	FROM raster_union_in;
- 
+
  INSERT INTO raster_union_out
 @@ -431,7 +431,7 @@ INSERT INTO raster_union_in
  INSERT INTO raster_union_out
@@ -12678,274 +12678,274 @@ index 8b47e87..353a49e 100644
 -		ST_Union(rast) AS rast
 +		ST_Union(rast order by rid) AS rast
  	FROM raster_union_in;
- 
+
  SELECT
 diff --git a/postgis/build/postgis-2.1.5/raster/test/regress/rt_utility.sql b/postgis/build/postgis-2.1.5/raster/test/regress/rt_utility.sql
 index 7e016ed..2ddfff8 100644
 --- a/postgis/build/postgis-2.1.5/raster/test/regress/rt_utility.sql
 +++ b/postgis/build/postgis-2.1.5/raster/test/regress/rt_utility.sql
 @@ -166,21 +166,24 @@ SELECT 'test 1.1', id, name
-     WHERE COALESCE(ST_WorldTorastercoordx(rast, 
-                                 ipx, 
+     WHERE COALESCE(ST_WorldTorastercoordx(rast,
+                                 ipx,
                                  ipy
 -                               ), 0) != 1;
 +                               ), 0) != 1
 +	ORDER BY id;
- 
+
  SELECT 'test 1.2', id, name
      FROM rt_utility_test
-     WHERE COALESCE(ST_WorldTorastercoordx(rast, 
-                                 scalex * (width - 1) + skewx * (height - 1) + ipx, 
+     WHERE COALESCE(ST_WorldTorastercoordx(rast,
+                                 scalex * (width - 1) + skewx * (height - 1) + ipx,
                                  skewy * (width - 1) + scaley * (height - 1) + ipy
 -                               ), 0) != width;
 +                               ), 0) != width
 +    ORDER BY id;
- 
+
  SELECT 'test 1.3', id, name
      FROM rt_utility_test
-     WHERE COALESCE(ST_WorldTorastercoordx(rast, 
-                                 scalex * width + skewx * height + ipx, 
+     WHERE COALESCE(ST_WorldTorastercoordx(rast,
+                                 scalex * width + skewx * height + ipx,
                                  skewy * width + scaley * height + ipy
 -                               ), 0) != width + 1;
 +                               ), 0) != width + 1
 +    ORDER BY id;
- 
+
  -----------------------------------------------------------------------
- -- Test 2 - ST_WorldTorastercoordx(rast raster, xw float8) 
+ -- Test 2 - ST_WorldTorastercoordx(rast raster, xw float8)
 @@ -191,27 +194,31 @@ SELECT 'test 2.1', id, name
-     WHERE skewx = 0 and 
-           COALESCE(ST_WorldTorastercoordx(rast, 
+     WHERE skewx = 0 and
+           COALESCE(ST_WorldTorastercoordx(rast,
                                  ipx
 -                               ), 0) != 1;
 +                               ), 0) != 1
 +    ORDER BY id;
- 
+
  SELECT 'test 2.2', id, name
      FROM rt_utility_test
-     WHERE skewx = 0 and 
-           COALESCE(ST_WorldTorastercoordx(rast, 
+     WHERE skewx = 0 and
+           COALESCE(ST_WorldTorastercoordx(rast,
                                  scalex * (width - 1) + ipx
 -                               ), 0) != width;
 +                               ), 0) != width
 +    ORDER BY id;
- 
+
  SELECT 'test 2.3', id, name
      FROM rt_utility_test
-     WHERE skewx = 0 and 
-           COALESCE(ST_WorldTorastercoordx(rast, 
+     WHERE skewx = 0 and
+           COALESCE(ST_WorldTorastercoordx(rast,
                                  scalex * width + ipx
 -                               ), 0) != width + 1;
 +                               ), 0) != width + 1
 +    ORDER BY id;
- 
+
  SELECT 'test 2.4', id, name
      FROM rt_utility_test
-     WHERE COALESCE(ST_WorldTorastercoordx(rast, 
+     WHERE COALESCE(ST_WorldTorastercoordx(rast,
                                  ipx
 -                               ), 0) != 1;
 +                               ), 0) != 1
 +	ORDER BY id;
- 
+
  -----------------------------------------------------------------------
- -- Test 3 - ST_WorldTorastercoordx(rast raster, pt geometry) 
+ -- Test 3 - ST_WorldTorastercoordx(rast raster, pt geometry)
 @@ -224,7 +231,8 @@ SELECT 'test 3.1', id, name
-                                              ipx, 
+                                              ipx,
                                               ipy
                                              )
 -                               ), 0) != 1;
 +                               ), 0) != 1
 +    ORDER BY id;
- 
+
  SELECT 'test 3.2', id, name
      FROM rt_utility_test
 @@ -233,7 +241,8 @@ SELECT 'test 3.2', id, name
-                                              scalex * (width - 1) + skewx * (height - 1) + ipx, 
+                                              scalex * (width - 1) + skewx * (height - 1) + ipx,
                                               skewy * (width - 1) + scaley * (height - 1) + ipy
                                              )
 -                               ), 0) != width;
 +                               ), 0) != width
 +    ORDER BY id;
- 
+
  SELECT 'test 3.3', id, name
      FROM rt_utility_test
 @@ -242,7 +251,8 @@ SELECT 'test 3.3', id, name
-                                              scalex * width + skewx * height + ipx, 
+                                              scalex * width + skewx * height + ipx,
                                               skewy * width + scaley * height + ipy
                                              )
 -                               ), 0) != width + 1;
 +                               ), 0) != width + 1
 +    ORDER BY id;
- 
+
  -----------------------------------------------------------------------
- -- Test 4 - ST_WorldTorastercoordy(rast raster, xw float8, yw float8) 
+ -- Test 4 - ST_WorldTorastercoordy(rast raster, xw float8, yw float8)
 @@ -253,21 +263,24 @@ SELECT 'test 4.1', id, name
-     WHERE COALESCE(ST_WorldTorastercoordy(rast, 
-                                 ipx, 
+     WHERE COALESCE(ST_WorldTorastercoordy(rast,
+                                 ipx,
                                  ipy
 -                               ), 0) != 1;
 +                               ), 0) != 1
 +    ORDER BY id;
- 
+
  SELECT 'test 4.2', id, name
      FROM rt_utility_test
-     WHERE COALESCE(ST_WorldTorastercoordy(rast, 
-                                 scalex * (width - 1) + skewx * (height - 1) + ipx, 
+     WHERE COALESCE(ST_WorldTorastercoordy(rast,
+                                 scalex * (width - 1) + skewx * (height - 1) + ipx,
                                  skewy * (width - 1) + scaley * (height - 1) + ipy
 -                               ), 0) != height;
 +                               ), 0) != height
 +    ORDER BY id;
- 
+
  SELECT 'test 4.3', id, name
      FROM rt_utility_test
-     WHERE COALESCE(ST_WorldTorastercoordy(rast, 
-                                 scalex * width + skewx * height + ipx, 
+     WHERE COALESCE(ST_WorldTorastercoordy(rast,
+                                 scalex * width + skewx * height + ipx,
                                  skewy * width + scaley * height + ipy
 -                               ), 0) != height + 1;
 +                               ), 0) != height + 1
 +    ORDER BY id;
- 
+
  -----------------------------------------------------------------------
- -- Test 5 - ST_WorldTorastercoordy(rast raster, yw float8) 
+ -- Test 5 - ST_WorldTorastercoordy(rast raster, yw float8)
 @@ -278,27 +291,31 @@ SELECT 'test 5.1', id, name
-     WHERE skewy = 0 and 
-           COALESCE(ST_WorldTorastercoordy(rast, 
+     WHERE skewy = 0 and
+           COALESCE(ST_WorldTorastercoordy(rast,
                                  ipy
 -                               ), 0) != 1;
 +                               ), 0) != 1
 +    ORDER BY id;
- 
+
  SELECT 'test 5.2', id, name
      FROM rt_utility_test
-     WHERE skewy = 0 and 
-           COALESCE(ST_WorldTorastercoordy(rast, 
+     WHERE skewy = 0 and
+           COALESCE(ST_WorldTorastercoordy(rast,
                                  scaley * (height - 1) + ipy
 -                               ), 0) != height;
 +                               ), 0) != height
 +    ORDER BY id;
- 
+
  SELECT 'test 5.3', id, name
      FROM rt_utility_test
-     WHERE skewy = 0 and 
-           COALESCE(ST_WorldTorastercoordy(rast, 
+     WHERE skewy = 0 and
+           COALESCE(ST_WorldTorastercoordy(rast,
                                  scaley * height + ipy
 -                               ), 0) != height + 1;
 +                               ), 0) != height + 1
 +    ORDER BY id;
- 
+
  SELECT 'test 5.4', id, name
      FROM rt_utility_test
-     WHERE COALESCE(ST_WorldTorastercoordy(rast, 
+     WHERE COALESCE(ST_WorldTorastercoordy(rast,
                                  ipy
 -                               ), 0) != 1;
 +                               ), 0) != 1
 +	ORDER BY id;
- 
- 
+
+
  -----------------------------------------------------------------------
 @@ -312,7 +329,8 @@ SELECT 'test 6.1', id, name
-                                              ipx, 
+                                              ipx,
                                               ipy
                                              )
 -                               ), 0) != 1;
 +                               ), 0) != 1
 +    ORDER BY id;
- 
+
  SELECT 'test 6.2', id, name
      FROM rt_utility_test
 @@ -321,7 +339,8 @@ SELECT 'test 6.2', id, name
-                                              scalex * (width - 1) + skewx * (height - 1) + ipx, 
+                                              scalex * (width - 1) + skewx * (height - 1) + ipx,
                                               skewy * (width - 1) + scaley * (height - 1) + ipy
                                              )
 -                               ), 0) != height;
 +                               ), 0) != height
 +    ORDER BY id;
- 
+
  SELECT 'test 6.3', id, name
      FROM rt_utility_test
 @@ -330,7 +349,8 @@ SELECT 'test 6.3', id, name
-                                              scalex * width + skewx * height + ipx, 
+                                              scalex * width + skewx * height + ipx,
                                               skewy * width + scaley * height + ipy
                                              )
 -                               ), 0) != height + 1;
 +                               ), 0) != height + 1
 +    ORDER BY id;
- 
+
  -----------------------------------------------------------------------
  -- Test 7 - ST_RasterToworldcoordx(rast raster, xr int, yr int)
 @@ -338,11 +358,13 @@ SELECT 'test 6.3', id, name
- 
+
  SELECT 'test 7.1', id, name
      FROM rt_utility_test
 -    WHERE COALESCE(ST_RasterToworldcoordx(rast, 1, 1), 0)::numeric != ipx::numeric;
 +    WHERE COALESCE(ST_RasterToworldcoordx(rast, 1, 1), 0)::numeric != ipx::numeric
 +    ORDER BY id;
-     
+
  SELECT 'test 7.2', id, name
      FROM rt_utility_test
 -    WHERE COALESCE(ST_RasterToworldcoordx(rast, width, height), 0)::numeric != (scalex * (width - 1) + skewx * (height - 1) + ipx)::numeric;
 +    WHERE COALESCE(ST_RasterToworldcoordx(rast, width, height), 0)::numeric != (scalex * (width - 1) + skewx * (height - 1) + ipx)::numeric
 +    ORDER BY id;
- 
+
  -----------------------------------------------------------------------
  -- Test 8 - ST_RasterToworldcoordx(rast raster, xr int)
 @@ -350,15 +372,18 @@ SELECT 'test 7.2', id, name
- 
+
  SELECT 'test 8.1', id, name
      FROM rt_utility_test
 -    WHERE skewx = 0 and COALESCE(ST_RasterToworldcoordx(rast, 1), 0)::numeric != ipx::numeric;
 +    WHERE skewx = 0 and COALESCE(ST_RasterToworldcoordx(rast, 1), 0)::numeric != ipx::numeric
 +    ORDER BY id;
-     
+
  SELECT 'test 8.2', id, name
      FROM rt_utility_test
 -    WHERE skewx = 0 and COALESCE(ST_RasterToworldcoordx(rast, width), 0)::numeric != (scalex * (width - 1) + ipx)::numeric;
 +    WHERE skewx = 0 and COALESCE(ST_RasterToworldcoordx(rast, width), 0)::numeric != (scalex * (width - 1) + ipx)::numeric
 +    ORDER BY id;
- 
+
  SELECT 'test 8.3', id, name
      FROM rt_utility_test
 -    WHERE COALESCE(ST_RasterToworldcoordx(rast, 1), 0)::numeric != ipx::numeric;
 +    WHERE COALESCE(ST_RasterToworldcoordx(rast, 1), 0)::numeric != ipx::numeric
 +    ORDER BY id;
-  
+
  -----------------------------------------------------------------------
  -- Test 9 - ST_RasterToworldcoordy(rast raster, xr int, yr int)
 @@ -366,11 +391,13 @@ SELECT 'test 8.3', id, name
- 
+
  SELECT 'test 9.1', id, name
      FROM rt_utility_test
 -    WHERE COALESCE(ST_RasterToworldcoordy(rast, 1, 1), 0)::numeric != ipy::numeric;
 +    WHERE COALESCE(ST_RasterToworldcoordy(rast, 1, 1), 0)::numeric != ipy::numeric
 +    ORDER BY id;
-     
+
  SELECT 'test 9.2', id, name
      FROM rt_utility_test
 -    WHERE round(COALESCE(ST_RasterToworldcoordy(rast, width, height), 0)::numeric, 10) != round((skewy * (width - 1) + scaley * (height - 1) + ipy)::numeric, 10);
 +    WHERE round(COALESCE(ST_RasterToworldcoordy(rast, width, height), 0)::numeric, 10) != round((skewy * (width - 1) + scaley * (height - 1) + ipy)::numeric, 10)
 +    ORDER BY id;
- 
+
  -----------------------------------------------------------------------
- -- Test 10 - ST_RasterToworldcoordy(rast raster, yr int) 
+ -- Test 10 - ST_RasterToworldcoordy(rast raster, yr int)
 @@ -378,15 +405,18 @@ SELECT 'test 9.2', id, name
- 
+
  SELECT 'test 10.1', id, name
      FROM rt_utility_test
 -    WHERE skewy = 0 and COALESCE(ST_RasterToworldcoordy(rast, 1, 1), 0)::numeric != ipy::numeric;
 +    WHERE skewy = 0 and COALESCE(ST_RasterToworldcoordy(rast, 1, 1), 0)::numeric != ipy::numeric
 +    ORDER BY id;
-     
+
  SELECT 'test 10.2', id, name
      FROM rt_utility_test
 -    WHERE skewy = 0 and COALESCE(ST_RasterToworldcoordy(rast, width, height), 0)::numeric != (scaley * (height - 1) + ipy)::numeric;
 +    WHERE skewy = 0 and COALESCE(ST_RasterToworldcoordy(rast, width, height), 0)::numeric != (scaley * (height - 1) + ipy)::numeric
 +    ORDER BY id;
- 
+
  SELECT 'test 10.3', id, name
      FROM rt_utility_test
 -    WHERE COALESCE(ST_RasterToworldcoordy(rast, 1), 0)::numeric != ipy::numeric;
 +    WHERE COALESCE(ST_RasterToworldcoordy(rast, 1), 0)::numeric != ipy::numeric
 +    ORDER BY id;
-     
+
  -----------------------------------------------------------------------
  -- Test 11 - st_minpossiblevalue(pixtype text)
 diff --git a/postgis/build/postgis-2.1.5/raster/test/regress/rt_worldtorastercoord.sql b/postgis/build/postgis-2.1.5/raster/test/regress/rt_worldtorastercoord.sql
@@ -12978,7 +12978,7 @@ index 38b1679..fa2141a 100644
  	(ST_WorldToRasterCoord(rast, 2, 2)).*
 -FROM raster_world2raster;
 +FROM raster_world2raster order by rid;
- 
+
  SELECT
  	rid,
  	(ST_WorldToRasterCoord(rast, ST_MakePoint(-2, -2))).*
@@ -13004,7 +13004,7 @@ index 38b1679..fa2141a 100644
  	(ST_WorldToRasterCoord(rast, ST_MakePoint(2, 2))).*
 -FROM raster_world2raster;
 +FROM raster_world2raster order by rid;
- 
+
  SELECT
  	rid,
  	ST_WorldToRasterCoordX(rast, -2, -2)
@@ -13030,13 +13030,13 @@ index 38b1679..fa2141a 100644
  	ST_WorldToRasterCoordX(rast, 2, 2)
 -FROM raster_world2raster;
 +FROM raster_world2raster order by rid;
- 
+
  SELECT
  	rid,
  	ST_WorldToRasterCoordX(rast, ST_MakePoint(-2, -2))
 -FROM raster_world2raster;
 +FROM raster_world2raster order by rid;
- 
+
  SELECT
  	rid,
  	ST_WorldToRasterCoordX(rast, -2)
@@ -13062,7 +13062,7 @@ index 38b1679..fa2141a 100644
  	ST_WorldToRasterCoordX(rast, 2)
 -FROM raster_world2raster;
 +FROM raster_world2raster order by rid;
- 
+
  SELECT
  	rid,
  	ST_WorldToRasterCoordY(rast, -2, -2)
@@ -13088,13 +13088,13 @@ index 38b1679..fa2141a 100644
  	ST_WorldToRasterCoordY(rast, 2, 2)
 -FROM raster_world2raster;
 +FROM raster_world2raster order by rid;
- 
+
  SELECT
  	rid,
  	ST_WorldToRasterCoordX(rast, ST_MakePoint(-2, -2))
 -FROM raster_world2raster;
 +FROM raster_world2raster order by rid;
- 
+
  SELECT
  	rid,
  	ST_WorldToRasterCoordY(rast, -2)
@@ -13120,7 +13120,7 @@ index 38b1679..fa2141a 100644
  	ST_WorldToRasterCoordY(rast, 2)
 -FROM raster_world2raster;
 +FROM raster_world2raster order by rid;
- 
+
  DROP TABLE raster_world2raster;
 diff --git a/postgis/build/postgis-2.1.5/regress/Makefile.in b/postgis/build/postgis-2.1.5/regress/Makefile.in
 index d42279c..ce65fd1 100644
@@ -13152,7 +13152,7 @@ index d42279c..ce65fd1 100644
  	relate \
  	bestsrid \
  	concave_hull
- 
+
 +
 +# tests can't pass
 +# ---------------------------------
@@ -13169,19 +13169,19 @@ index d42279c..ce65fd1 100644
  	# GEOS-3.3 adds:
  	# ST_HausdorffDistance, ST_Buffer(params)
 @@ -187,19 +196,19 @@ distclean: clean
- 
+
  staged-install-topology:
  	@if test x"@TOPOLOGY@" != "x"; then \
 -		$(MAKE) -C ../topology REGRESS=1 DESTDIR=$(REGRESS_INSTALLDIR) install; \
 +		$(MAKE) -C ../topology REGRESS=1 USE_PGXS=1 DESTDIR=$(REGRESS_INSTALLDIR) install; \
  	fi
- 
+
  staged-install-raster:
  	@if test x"@RASTER@" != "x"; then \
 -		$(MAKE) -C ../raster/rt_pg REGRESS=1 DESTDIR=$(REGRESS_INSTALLDIR) install; \
 +		$(MAKE) -C ../raster/rt_pg REGRESS=1 USE_PGXS=1 DESTDIR=$(REGRESS_INSTALLDIR) install; \
  	fi
- 
+
  staged-install: staged-install-raster staged-install-topology
 -	$(MAKE) -C ../postgis REGRESS=1 DESTDIR=$(REGRESS_INSTALLDIR) install
 -	$(MAKE) -C ../ REGRESS=1 DESTDIR=$(REGRESS_INSTALLDIR) comments-install
@@ -13190,7 +13190,7 @@ index d42279c..ce65fd1 100644
  	$(PERL) -pi.bak -e 's,\$$libdir,$(REGRESS_INSTALLDIR)/lib,g' $(REGRESS_INSTALLDIR)/share/contrib/postgis/*.sql
 -	#$(MAKE) -C ../loader REGRESS=1 DESTDIR=$(REGRESS_INSTALLDIR) install
 +	#$(MAKE) -C ../loader REGRESS=1 USE_PGXS=1 DESTDIR=$(REGRESS_INSTALLDIR) install
- 
+
  test check: staged-install
  	$(PERL) run_test.pl $(RUNTESTFLAGS) $(TESTS) && \
 diff --git a/postgis/build/postgis-2.1.5/regress/binary.sql b/postgis/build/postgis-2.1.5/regress/binary.sql
@@ -13200,7 +13200,7 @@ index 7a36b65..3a451e7 100644
 @@ -31,9 +31,9 @@ SELECT st_force4d(g) FROM tm.geoms WHERE id < 15 ORDER BY id;
  INSERT INTO tm.geoms(g)
  SELECT st_setsrid(g,4326) FROM tm.geoms ORDER BY id;
- 
+
 -COPY tm.geoms TO :tmpfile WITH BINARY;
 +COPY tm.geoms TO :tmpfile; -- WITH BINARY;
  CREATE TABLE tm.geoms_in AS SELECT * FROM tm.geoms LIMIT 0;
@@ -13208,11 +13208,11 @@ index 7a36b65..3a451e7 100644
 +COPY tm.geoms_in FROM :tmpfile; -- WITH BINARY;
  SELECT 'geometry', count(*) FROM tm.geoms_in i, tm.geoms o WHERE i.id = o.id
   AND ST_OrderingEquals(i.g, o.g);
- 
+
 @@ -45,9 +45,9 @@ WHERE geometrytype(g) NOT LIKE '%CURVE%'
    AND geometrytype(g) NOT LIKE 'TIN%'
  ;
- 
+
 -COPY tm.geogs TO :tmpfile WITH BINARY;
 +COPY tm.geogs TO :tmpfile; -- WITH BINARY;
  CREATE TABLE tm.geogs_in AS SELECT * FROM tm.geogs LIMIT 0;
@@ -13220,37 +13220,37 @@ index 7a36b65..3a451e7 100644
 +COPY tm.geogs_in FROM :tmpfile; -- WITH BINARY;
  SELECT 'geometry', count(*) FROM tm.geogs_in i, tm.geogs o WHERE i.id = o.id
   AND ST_OrderingEquals(i.g::geometry, o.g::geometry);
- 
+
 diff --git a/postgis/build/postgis-2.1.5/regress/clean.sql b/postgis/build/postgis-2.1.5/regress/clean.sql
 index 4d4e598..ad348a1 100644
 --- a/postgis/build/postgis-2.1.5/regress/clean.sql
 +++ b/postgis/build/postgis-2.1.5/regress/clean.sql
 @@ -42,7 +42,7 @@ SELECT origin,caseno,
-        st_equals(st_collectionextract(st_makevalid(orig),3), st_collectionextract(valid,3)), 
+        st_equals(st_collectionextract(st_makevalid(orig),3), st_collectionextract(valid,3)),
         st_isvalid(st_makevalid(orig)), -- paranoia
         (st_isvaliddetail(orig)).valid
 -  FROM clean_cases;
 +  FROM clean_cases order by origin desc,caseno;
- 
- 
+
+
  SELECT '#1719.1', ST_AsEWKT(ST_MakeValid('POINT(0 0)'));
 diff --git a/postgis/build/postgis-2.1.5/regress/legacy.sql b/postgis/build/postgis-2.1.5/regress/legacy.sql
 index dc68eee..98b6243 100644
 --- a/postgis/build/postgis-2.1.5/regress/legacy.sql
 +++ b/postgis/build/postgis-2.1.5/regress/legacy.sql
 @@ -38,12 +38,12 @@ SELECT 'Geoserver6', "id",substr(encode(asBinary(force_2d("pt"),'XDR'),'base64')
- 
+
  -- MapServer 5.4 tests
  select 'MapServer1', attname from pg_attribute, pg_constraint, pg_class where pg_constraint.conrelid = pg_class.oid and pg_class.oid = pg_attribute.attrelid and pg_constraint.contype = 'p' and pg_constraint.conkey[1] = pg_attribute.attnum and pg_class.relname = 'wmstest' and pg_table_is_visible(pg_class.oid) and pg_constraint.conkey[2] is null;
 -select 'MapServer2', "id",substr(encode(AsBinary(force_collection(force_2d("pt")),'NDR'),'base64'),0,16) as geom,"id" from wmstest where pt && GeomFromText('POLYGON((-98.5 32,-98.5 39,-91.5 39,-91.5 32,-98.5 32))',find_srid('','wmstest','pt'));
 +select 'MapServer2', "id",substr(encode(AsBinary(force_collection(force_2d("pt")),'NDR'),'base64'),0,16) as geom,"id" from wmstest where pt && GeomFromText('POLYGON((-98.5 32,-98.5 39,-91.5 39,-91.5 32,-98.5 32))',find_srid('','wmstest','pt')) order by "id";
- 
+
  -- MapServer 5.6 tests
  select * from wmstest where false limit 0;
  select 'MapServer3', attname from pg_attribute, pg_constraint, pg_class where pg_constraint.conrelid = pg_class.oid and pg_class.oid = pg_attribute.attrelid and pg_constraint.contype = 'p' and pg_constraint.conkey[1] = pg_attribute.attnum and pg_class.relname = 'wmstest' and pg_table_is_visible(pg_class.oid) and pg_constraint.conkey[2] is null;
 -select 'MapServer4', "id",substr(encode(AsBinary(force_collection(force_2d("pt")),'NDR'),'hex'),0,16) as geom,"id" from wmstest where pt && GeomFromText('POLYGON((-98.5 32,-98.5 39,-91.5 39,-91.5 32,-98.5 32))',find_srid('','wmstest','pt'));
 +select 'MapServer4', "id",substr(encode(AsBinary(force_collection(force_2d("pt")),'NDR'),'hex'),0,16) as geom,"id" from wmstest where pt && GeomFromText('POLYGON((-98.5 32,-98.5 39,-91.5 39,-91.5 32,-98.5 32))',find_srid('','wmstest','pt')) order by "id";
- 
+
  -- Drop the data table
  SELECT 'Removing the data table...';
 diff --git a/postgis/build/postgis-2.1.5/regress/loader/MultiToSinglePoint.select.sql b/postgis/build/postgis-2.1.5/regress/loader/MultiToSinglePoint.select.sql
@@ -13260,7 +13260,7 @@ index 716254c..9bbaa5b 100644
 @@ -1,2 +1,2 @@
 -select ST_Asewkt(ST_SnapToGrid(the_geom,0.00001)) from loadedshp;
 +select ST_Asewkt(ST_SnapToGrid(the_geom,0.00001)) from loadedshp order by gid;
- 
+
 diff --git a/postgis/build/postgis-2.1.5/regress/loader/NoTransPoint.select.sql b/postgis/build/postgis-2.1.5/regress/loader/NoTransPoint.select.sql
 index e680818..99421da 100644
 --- a/postgis/build/postgis-2.1.5/regress/loader/NoTransPoint.select.sql
@@ -13268,7 +13268,7 @@ index e680818..99421da 100644
 @@ -1,2 +1,2 @@
 -select ST_Asewkt(the_geom) from loadedshp;
 +select ST_Asewkt(the_geom) from loadedshp order by gid;
- 
+
 diff --git a/postgis/build/postgis-2.1.5/regress/loader/NotReallyMultiPoint.select.sql b/postgis/build/postgis-2.1.5/regress/loader/NotReallyMultiPoint.select.sql
 index 716254c..9bbaa5b 100644
 --- a/postgis/build/postgis-2.1.5/regress/loader/NotReallyMultiPoint.select.sql
@@ -13276,7 +13276,7 @@ index 716254c..9bbaa5b 100644
 @@ -1,2 +1,2 @@
 -select ST_Asewkt(ST_SnapToGrid(the_geom,0.00001)) from loadedshp;
 +select ST_Asewkt(ST_SnapToGrid(the_geom,0.00001)) from loadedshp order by gid;
- 
+
 diff --git a/postgis/build/postgis-2.1.5/regress/loader/PointZ-G.select.expected b/postgis/build/postgis-2.1.5/regress/loader/PointZ-G.select.expected
 index 18085a6..538307b 100644
 --- a/postgis/build/postgis-2.1.5/regress/loader/PointZ-G.select.expected
@@ -13311,7 +13311,7 @@ index 0aec069..63903ba 100644
 @@ -1,2 +1,2 @@
 -select ST_Asewkt(ST_SnapToGrid(the_geom,0.00000001)) from loadedshp;
 +select ST_Asewkt(ST_SnapToGrid(the_geom,0.00000001)) from loadedshp order by gid;
- 
+
 diff --git a/postgis/build/postgis-2.1.5/regress/loader/ReprojectPtsGeog.select.sql b/postgis/build/postgis-2.1.5/regress/loader/ReprojectPtsGeog.select.sql
 index d1611a5..0bc0e41 100644
 --- a/postgis/build/postgis-2.1.5/regress/loader/ReprojectPtsGeog.select.sql
@@ -13319,22 +13319,22 @@ index d1611a5..0bc0e41 100644
 @@ -1,2 +1,2 @@
 -select ST_Asewkt(ST_SnapToGrid(the_geom::geometry,0.00000001)) from loadedshp;
 +select ST_Asewkt(ST_SnapToGrid(the_geom::geometry,0.00000001)) from loadedshp order by gid;
- 
+
 diff --git a/postgis/build/postgis-2.1.5/regress/regress_index.sql b/postgis/build/postgis-2.1.5/regress/regress_index.sql
 index 8b51160..cd4e61c 100644
 --- a/postgis/build/postgis-2.1.5/regress/regress_index.sql
 +++ b/postgis/build/postgis-2.1.5/regress/regress_index.sql
 @@ -7,10 +7,27 @@
- 
+
  CREATE INDEX quick_gist on test using gist (the_geom);
- 
+
 +set enable_seqscan = on;
 +set enable_bitmapscan = off;
 +set enable_indexscan = off;
 +
 + select 'test 1: Seq Scan on test';
   select num,ST_astext(the_geom) from test where the_geom && 'BOX3D(125 125,135 135)'::box3d order by num;
- 
+
 +--JIRA: MPP-24904, because Bitmap Index Scan is also supported in GPDB
 +set enable_seqscan = off;
 +set enable_bitmapscan = on;
@@ -13347,10 +13347,10 @@ index 8b51160..cd4e61c 100644
  set enable_seqscan = off;
 +set enable_bitmapscan = off;
 +set enable_indexscan = on;
- 
+
 + select 'test 3: Index Scan using quick_gist on test';
   select num,ST_astext(the_geom) from test where the_geom && 'BOX3D(125 125,135 135)'::box3d  order by num;
- 
+
  DROP TABLE test;
 diff --git a/postgis/build/postgis-2.1.5/regress/regress_index_expected b/postgis/build/postgis-2.1.5/regress/regress_index_expected
 index 19dc436..4dc4621 100644
@@ -13374,17 +13374,17 @@ index e1f84c7..f8d4186 100755
 --- a/postgis/build/postgis-2.1.5/regress/run_test.pl
 +++ b/postgis/build/postgis-2.1.5/regress/run_test.pl
 @@ -289,9 +289,11 @@ print "\nRunning tests\n\n";
- 
+
  foreach $TEST (@ARGV)
  {
 +
  	# catch a common mistake (strip trailing .sql)
  	$TEST =~ s/.sql$//;
- 
+
 +
  	start_test($TEST);
- 
- 	# Check for a "-pre.pl" file in case there are setup commands 
+
+ 	# Check for a "-pre.pl" file in case there are setup commands
 @@ -614,6 +616,10 @@ sub run_simple_test
  	@lines = grep(!/^(LOG|SET|TRUNCATE)/, @lines);
  	@lines = grep(!/^LINE \d/, @lines);
@@ -13393,7 +13393,7 @@ index e1f84c7..f8d4186 100755
 +	@lines = grep(!/NOTICE:  OIDS=TRUE is not recommended for user-created tables/i, @lines);
 +	@lines = grep(!/WARNING:  Referential integrity \(FOREIGN KEY\) constraints are not supported/i, @lines);
 +	@lines = grep(!/NOTICE:  no non-null\/empty features, unable to compute statistics/i, @lines);
- 
+
  	# Morph values into expected forms
  	for ( my $i = 0; $i < @lines; $i++ )
 @@ -624,6 +630,12 @@ sub run_simple_test
@@ -13407,13 +13407,13 @@ index e1f84c7..f8d4186 100755
 +		# kick off boring DEBUG info: (segN hostname:port pid=NN)
 +		$lines[$i] =~ s/\s+\([^(]*seg\d+ [^)]* pid=\d+\)//g;
  	}
- 	
+
  	# Write out output file
 @@ -776,7 +788,7 @@ sub run_dumper_and_check_output
  		}
- 
+
  		# Compare with expected output if there is any.
--		
+-
 +
  		if ( -r $expected_shp_file )
  		{
@@ -13422,7 +13422,7 @@ index e1f84c7..f8d4186 100755
  		    fail("$description: running raster2pgsql", $errfile);
  		    return 0;
  	    }
--	    
+-
 +
  	    if ( -r $expected_sql_file )
  	    {
@@ -13432,28 +13432,28 @@ index e1f84c7..f8d4186 100755
  		select count(*) from pg_opclass union all
  		select count(*) from pg_namespace
 -			where nspname NOT LIKE 'pg_%' union all
--		select count(*) from pg_opfamily ) 
+-		select count(*) from pg_opfamily )
 +			where nspname NOT LIKE 'pg_%')
  		select sum(count) from counts");
- 
+
   	return $count;
 @@ -1107,11 +1118,13 @@ sub create_spatial
  	my ($cmd, $rv);
  	print "Creating database '$DB' \n";
- 
+
 -	$cmd = "createdb --encoding=UTF-8 --template=template0 --lc-collate=C $DB > $REGRESS_LOG";
 -	$rv = system($cmd);
 -	$cmd = "createlang plpgsql $DB >> $REGRESS_LOG 2>&1";
 +	$cmd = "createdb --encoding=UTF-8 --template=template0 $DB > $REGRESS_LOG";
  	$rv = system($cmd);
- 
+
 +#	Greenplum has installed plpqsel already.
 +#	$cmd = "createlang plpgsql $DB >> $REGRESS_LOG 2>&1";
 +#	$rv = system($cmd);
 +
  	# Count database objects before installing anything
  	$OBJ_COUNT_PRE = count_db_objects();
- 
+
 diff --git a/postgis/build/postgis-2.1.5/regress/sql-mm-circularstring.sql b/postgis/build/postgis-2.1.5/regress/sql-mm-circularstring.sql
 index 67a8867..4e0e618 100644
 --- a/postgis/build/postgis-2.1.5/regress/sql-mm-circularstring.sql
@@ -13461,31 +13461,31 @@ index 67a8867..4e0e618 100644
 @@ -158,15 +158,15 @@ UPDATE public.circularstring
                  15 0)')
          WHERE id = 2;
- 
--SELECT 'astext01', ST_astext(the_geom_2d) FROM public.circularstring;        
--SELECT 'astext02', ST_astext(the_geom_3dm) FROM public.circularstring;        
--SELECT 'astext03', ST_astext(the_geom_3dz) FROM public.circularstring;        
--SELECT 'astext04', ST_astext(the_geom_4d) FROM public.circularstring;        
+
+-SELECT 'astext01', ST_astext(the_geom_2d) FROM public.circularstring;
+-SELECT 'astext02', ST_astext(the_geom_3dm) FROM public.circularstring;
+-SELECT 'astext03', ST_astext(the_geom_3dz) FROM public.circularstring;
+-SELECT 'astext04', ST_astext(the_geom_4d) FROM public.circularstring;
 +SELECT 'astext01', ST_astext(the_geom_2d) FROM public.circularstring order by 2;
 +SELECT 'astext02', ST_astext(the_geom_3dm) FROM public.circularstring order by 2;
 +SELECT 'astext03', ST_astext(the_geom_3dz) FROM public.circularstring order by 2;
 +SELECT 'astext04', ST_astext(the_geom_4d) FROM public.circularstring order by 2;
- 
--SELECT 'asewkt01', ST_asewkt(the_geom_2d) FROM public.circularstring;        
--SELECT 'asewkt02', ST_asewkt(the_geom_3dm) FROM public.circularstring;        
--SELECT 'asewkt03', ST_asewkt(the_geom_3dz) FROM public.circularstring;        
--SELECT 'asewkt04', ST_asewkt(the_geom_4d) FROM public.circularstring;        
+
+-SELECT 'asewkt01', ST_asewkt(the_geom_2d) FROM public.circularstring;
+-SELECT 'asewkt02', ST_asewkt(the_geom_3dm) FROM public.circularstring;
+-SELECT 'asewkt03', ST_asewkt(the_geom_3dz) FROM public.circularstring;
+-SELECT 'asewkt04', ST_asewkt(the_geom_4d) FROM public.circularstring;
 +SELECT 'asewkt01', ST_asewkt(the_geom_2d) FROM public.circularstring order by 2;
 +SELECT 'asewkt02', ST_asewkt(the_geom_3dm) FROM public.circularstring order by 2;
 +SELECT 'asewkt03', ST_asewkt(the_geom_3dz) FROM public.circularstring order by 2;
 +SELECT 'asewkt04', ST_asewkt(the_geom_4d) FROM public.circularstring order by 2;
- 
+
  -- These tests will fail on different architectures
  -- We need a way to handle multiple byte orderings
 @@ -180,20 +180,20 @@ SELECT 'asewkt04', ST_asewkt(the_geom_4d) FROM public.circularstring;
  --SELECT 'asewkb03', encode(asewkb(the_geom_3dz), 'hex') FROM public.circularstring;
  --SELECT 'asewkb04', encode(asewkb(the_geom_4d), 'hex') FROM public.circularstring;
- 
+
 -SELECT 'ST_CurveToLine-201', ST_asewkt( ST_SnapToGrid(ST_CurveToLine(the_geom_2d, 2), 'POINT(0 0 0 0)'::geometry, 1e-8, 1e-8, 1e-8, 1e-8)) FROM public.circularstring;
 -SELECT 'ST_CurveToLine-202', ST_asewkt( ST_SnapToGrid(ST_CurveToLine(the_geom_3dm, 2), 'POINT(0 0 0 0)'::geometry, 1e-8, 1e-8, 1e-8, 1e-8)) FROM public.circularstring;
 -SELECT 'ST_CurveToLine-203', ST_asewkt( ST_SnapToGrid(ST_CurveToLine(the_geom_3dz, 2), 'POINT(0 0 0 0)'::geometry, 1e-8, 1e-8, 1e-8, 1e-8)) FROM public.circularstring;
@@ -13494,7 +13494,7 @@ index 67a8867..4e0e618 100644
 +SELECT 'ST_CurveToLine-202', ST_asewkt( ST_SnapToGrid(ST_CurveToLine(the_geom_3dm, 2), 'POINT(0 0 0 0)'::geometry, 1e-8, 1e-8, 1e-8, 1e-8)) FROM public.circularstring order by id;
 +SELECT 'ST_CurveToLine-203', ST_asewkt( ST_SnapToGrid(ST_CurveToLine(the_geom_3dz, 2), 'POINT(0 0 0 0)'::geometry, 1e-8, 1e-8, 1e-8, 1e-8)) FROM public.circularstring order by id;
 +SELECT 'ST_CurveToLine-204', ST_asewkt( ST_SnapToGrid(ST_CurveToLine(the_geom_4d, 2), 'POINT(0 0 0 0)'::geometry, 1e-8, 1e-8, 1e-8, 1e-8)) FROM public.circularstring order by id;
- 
+
 -SELECT 'ST_CurveToLine-401', ST_asewkt( ST_SnapToGrid(ST_CurveToLine(the_geom_2d, 4), 'POINT(0 0 0 0)'::geometry, 1e-8, 1e-8, 1e-8, 1e-8)) FROM public.circularstring;
 -SELECT 'ST_CurveToLine-402', ST_asewkt( ST_SnapToGrid(ST_CurveToLine(the_geom_3dm, 4), 'POINT(0 0 0 0)'::geometry, 1e-8, 1e-8, 1e-8, 1e-8)) FROM public.circularstring;
 -SELECT 'ST_CurveToLine-403', ST_asewkt( ST_SnapToGrid(ST_CurveToLine(the_geom_3dz, 4), 'POINT(0 0 0 0)'::geometry, 1e-8, 1e-8, 1e-8, 1e-8)) FROM public.circularstring;
@@ -13503,7 +13503,7 @@ index 67a8867..4e0e618 100644
 +SELECT 'ST_CurveToLine-402', ST_asewkt( ST_SnapToGrid(ST_CurveToLine(the_geom_3dm, 4), 'POINT(0 0 0 0)'::geometry, 1e-8, 1e-8, 1e-8, 1e-8)) FROM public.circularstring order by id;
 +SELECT 'ST_CurveToLine-403', ST_asewkt( ST_SnapToGrid(ST_CurveToLine(the_geom_3dz, 4), 'POINT(0 0 0 0)'::geometry, 1e-8, 1e-8, 1e-8, 1e-8)) FROM public.circularstring order by id;
 +SELECT 'ST_CurveToLine-404', ST_asewkt( ST_SnapToGrid(ST_CurveToLine(the_geom_4d, 4), 'POINT(0 0 0 0)'::geometry, 1e-8, 1e-8, 1e-8, 1e-8)) FROM public.circularstring order by id;
- 
+
 -SELECT 'ST_CurveToLine01', ST_asewkt( ST_SnapToGrid(ST_CurveToLine(the_geom_2d), 'POINT(0 0 0 0)'::geometry, 1e-8, 1e-8, 1e-8, 1e-8)) FROM public.circularstring;
 -SELECT 'ST_CurveToLine02', ST_asewkt( ST_SnapToGrid(ST_CurveToLine(the_geom_3dm), 'POINT(0 0 0 0)'::geometry, 1e-8, 1e-8, 1e-8, 1e-8)) FROM public.circularstring;
 -SELECT 'ST_CurveToLine03', ST_asewkt( ST_SnapToGrid(ST_CurveToLine(the_geom_3dz), 'POINT(0 0 0 0)'::geometry, 1e-8, 1e-8, 1e-8, 1e-8)) FROM public.circularstring;
@@ -13512,37 +13512,37 @@ index 67a8867..4e0e618 100644
 +SELECT 'ST_CurveToLine02', ST_asewkt( ST_SnapToGrid(ST_CurveToLine(the_geom_3dm), 'POINT(0 0 0 0)'::geometry, 1e-8, 1e-8, 1e-8, 1e-8)) FROM public.circularstring order by id;
 +SELECT 'ST_CurveToLine03', ST_asewkt( ST_SnapToGrid(ST_CurveToLine(the_geom_3dz), 'POINT(0 0 0 0)'::geometry, 1e-8, 1e-8, 1e-8, 1e-8)) FROM public.circularstring order by id;
 +SELECT 'ST_CurveToLine04', ST_asewkt( ST_SnapToGrid(ST_CurveToLine(the_geom_4d), 'POINT(0 0 0 0)'::geometry, 1e-8, 1e-8, 1e-8, 1e-8)) FROM public.circularstring order by id;
- 
+
  --Removed due to discrepencies between hardware
  --SELECT 'box2d01', box2d(the_geom_2d) FROM public.circularstring;
 @@ -214,15 +214,15 @@ SELECT 'ST_CurveToLine04', ST_asewkt( ST_SnapToGrid(ST_CurveToLine(the_geom_4d),
  --SELECT 'ST_LineToCurve04', ST_asewkt(ST_LineToCurve(ST_CurveToLine(the_geom_4d))) FROM public.circularstring;
- 
+
  -- Repeat tests with new function names.
--SELECT 'astext01', ST_astext(the_geom_2d) FROM public.circularstring;        
--SELECT 'astext02', ST_astext(the_geom_3dm) FROM public.circularstring;        
--SELECT 'astext03', ST_astext(the_geom_3dz) FROM public.circularstring;        
--SELECT 'astext04', ST_astext(the_geom_4d) FROM public.circularstring;        
+-SELECT 'astext01', ST_astext(the_geom_2d) FROM public.circularstring;
+-SELECT 'astext02', ST_astext(the_geom_3dm) FROM public.circularstring;
+-SELECT 'astext03', ST_astext(the_geom_3dz) FROM public.circularstring;
+-SELECT 'astext04', ST_astext(the_geom_4d) FROM public.circularstring;
 +SELECT 'astext01', ST_astext(the_geom_2d) FROM public.circularstring order by 2;
 +SELECT 'astext02', ST_astext(the_geom_3dm) FROM public.circularstring order by 2;
 +SELECT 'astext03', ST_astext(the_geom_3dz) FROM public.circularstring order by 2;
 +SELECT 'astext04', ST_astext(the_geom_4d) FROM public.circularstring order by 2;
- 
--SELECT 'asewkt01', ST_asewkt(the_geom_2d) FROM public.circularstring;        
--SELECT 'asewkt02', ST_asewkt(the_geom_3dm) FROM public.circularstring;        
--SELECT 'asewkt03', ST_asewkt(the_geom_3dz) FROM public.circularstring;        
--SELECT 'asewkt04', ST_asewkt(the_geom_4d) FROM public.circularstring;        
+
+-SELECT 'asewkt01', ST_asewkt(the_geom_2d) FROM public.circularstring;
+-SELECT 'asewkt02', ST_asewkt(the_geom_3dm) FROM public.circularstring;
+-SELECT 'asewkt03', ST_asewkt(the_geom_3dz) FROM public.circularstring;
+-SELECT 'asewkt04', ST_asewkt(the_geom_4d) FROM public.circularstring;
 +SELECT 'asewkt01', ST_asewkt(the_geom_2d) FROM public.circularstring order by 2;
 +SELECT 'asewkt02', ST_asewkt(the_geom_3dm) FROM public.circularstring order by 2;
 +SELECT 'asewkt03', ST_asewkt(the_geom_3dz) FROM public.circularstring order by 2;
 +SELECT 'asewkt04', ST_asewkt(the_geom_4d) FROM public.circularstring order by 2;
- 
+
  -- These tests will fail on different architectures
  -- We need a way to handle multiple byte orderings
 @@ -262,15 +262,15 @@ SELECT 'SRID02', ST_SRID(the_geom_3dm) FROM public.circularstring;
  SELECT 'SRID03', ST_SRID(the_geom_3dz) FROM public.circularstring;
  SELECT 'SRID04', ST_SRID(the_geom_4d) FROM public.circularstring;
- 
+
 -SELECT 'accessors01', ST_IsEmpty(the_geom_2d), ST_isSimple(the_geom_2d), ST_isClosed(the_geom_2d), ST_isRing(the_geom_2d) FROM public.circularstring;
 -SELECT 'accessors02', ST_IsEmpty(the_geom_3dm), ST_isSimple(the_geom_3dm), ST_isClosed(the_geom_3dm), ST_isRing(the_geom_3dm) FROM public.circularstring;
 -SELECT 'accessors03', ST_IsEmpty(the_geom_3dz), ST_isSimple(the_geom_3dz), ST_isClosed(the_geom_3dz), ST_isRing(the_geom_3dz) FROM public.circularstring;
@@ -13551,7 +13551,7 @@ index 67a8867..4e0e618 100644
 +SELECT 'accessors02', ST_IsEmpty(the_geom_3dm), ST_isSimple(the_geom_3dm), ST_isClosed(the_geom_3dm), ST_isRing(the_geom_3dm) FROM public.circularstring order by id;
 +SELECT 'accessors03', ST_IsEmpty(the_geom_3dz), ST_isSimple(the_geom_3dz), ST_isClosed(the_geom_3dz), ST_isRing(the_geom_3dz) FROM public.circularstring order by id;
 +SELECT 'accessors04', ST_IsEmpty(the_geom_4d), ST_isSimple(the_geom_4d), ST_isClosed(the_geom_4d), ST_isRing(the_geom_4d) FROM public.circularstring order by id;
- 
+
 -SELECT 'envelope01', ST_AsText(ST_SnapToGrid(ST_Envelope(the_geom_2d), 'POINT(0 0 0 0)'::geometry, 1e-8, 1e-8, 1e-8, 1e-8)) FROM public.circularstring;
 -SELECT 'envelope02', ST_AsText(ST_SnapToGrid(ST_Envelope(the_geom_3dm), 'POINT(0 0 0 0)'::geometry, 1e-8, 1e-8, 1e-8, 1e-8)) FROM public.circularstring;
 -SELECT 'envelope03', ST_AsText(ST_SnapToGrid(ST_Envelope(the_geom_3dz), 'POINT(0 0 0 0)'::geometry, 1e-8, 1e-8, 1e-8, 1e-8)) FROM public.circularstring;
@@ -13560,7 +13560,7 @@ index 67a8867..4e0e618 100644
 +SELECT 'envelope02', ST_AsText(ST_SnapToGrid(ST_Envelope(the_geom_3dm), 'POINT(0 0 0 0)'::geometry, 1e-8, 1e-8, 1e-8, 1e-8)) FROM public.circularstring order by id;
 +SELECT 'envelope03', ST_AsText(ST_SnapToGrid(ST_Envelope(the_geom_3dz), 'POINT(0 0 0 0)'::geometry, 1e-8, 1e-8, 1e-8, 1e-8)) FROM public.circularstring order by id;
 +SELECT 'envelope04', ST_AsText(ST_SnapToGrid(ST_Envelope(the_geom_4d), 'POINT(0 0 0 0)'::geometry, 1e-8, 1e-8, 1e-8, 1e-8)) FROM public.circularstring order by id;
- 
+
  SELECT DropGeometryColumn('public', 'circularstring', 'the_geom_4d');
  SELECT DropGeometryColumn('public', 'circularstring', 'the_geom_3dz');
 diff --git a/postgis/build/postgis-2.1.5/regress/sql-mm-compoundcurve.sql b/postgis/build/postgis-2.1.5/regress/sql-mm-compoundcurve.sql
@@ -13610,14 +13610,14 @@ index 9e8e698..04ccb8d 100644
 --- a/postgis/build/postgis-2.1.5/regress/tickets.sql
 +++ b/postgis/build/postgis-2.1.5/regress/tickets.sql
 @@ -409,7 +409,7 @@ INSERT INTO foo VALUES (2, st_geomfromtext('MULTIPOLYGON(((-113.7 35.3,-113.7 35
- 
+
  select '#884', id, ST_Within(
  ST_GeomFromText('POINT (-113.4 35.6)'), the_geom
 -) from foo;
 +) from foo order by id;
- 
+
  select '#938', 'POLYGON EMPTY'::geometry::box2d;
- 
+
 @@ -453,9 +453,9 @@ create table t(g geometry);
  select '#877.1', ST_EstimatedExtent('t','g');
  analyze t;
@@ -13628,12 +13628,12 @@ index 9e8e698..04ccb8d 100644
 -SET client_min_messages TO NOTICE;
 +--SET client_min_messages TO NOTICE;
  insert into t(g) values ('LINESTRING(-10 -50, 20 30)');
- 
+
  -- #877.3
 @@ -463,6 +463,10 @@ with e as ( select ST_EstimatedExtent('t','g') as e )
  select '#877.3', round(st_xmin(e.e)::numeric, 5), round(st_xmax(e.e)::numeric, 5),
  round(st_ymin(e.e)::numeric, 5), round(st_ymax(e.e)::numeric, 5) from e;
- 
+
 +-- TODO: Said Greenplum doesn't support Analyze, so I comment out the expected result for below two queries.
 +-- 	#877.4|-10.15000|20.15000|-50.40000|30.40000
 +-- 	#877.5|-10.15000|20.15000|-50.40000|30.40000
@@ -13674,7 +13674,7 @@ index 9e8e698..04ccb8d 100644
 -  st_intersects(g, 'POLYGON((0 0, 1 1, 1 0, 0 0))'::geometry) from cacheable;
 +  st_intersects(g, 'POLYGON((0 0, 1 1, 1 0, 0 0))'::geometry) from cacheable order by id;
  DROP TABLE cacheable;
- 
+
  -- #1489
 @@ -855,7 +863,7 @@ SELECT '#2168',  ST_Distance(g1,g2)::numeric(16,8)  As dist_g1_g2, ST_Distance(g
  CREATE TABLE images (id integer, name varchar, extent geography(POLYGON,4326));
@@ -13683,7 +13683,7 @@ index 9e8e698..04ccb8d 100644
 -SELECT '#2556' AS ticket, id, round(ST_Distance(extent, 'SRID=4326;POLYGON((-46.625977 81.634149,-46.625977 81.348076,-48.999023 81.348076,-48.999023 81.634149,-46.625977 81.634149))'::geography)) from images;
 +SELECT '#2556' AS ticket, id, round(ST_Distance(extent, 'SRID=4326;POLYGON((-46.625977 81.634149,-46.625977 81.348076,-48.999023 81.348076,-48.999023 81.634149,-46.625977 81.634149))'::geography)) from images order by id;
  DROP TABLE images;
- 
+
  SELECT '#2704', ST_AsText(ST_GeomFromGML('<?xml version="1.0"?>
 diff --git a/postgis/build/postgis-2.1.5/regress/tickets_expected b/postgis/build/postgis-2.1.5/regress/tickets_expected
 index a36b7dd..85afb10 100644
@@ -13697,15 +13697,43 @@ index a36b7dd..85afb10 100644
  ERROR:  stats for "t.g" do not exist
  ERROR:  stats for "t.g" do not exist
  #877.4|-10.15000|20.15000|-50.40000|30.40000
+@@ -155,14 +155,17 @@ #1292.1|POINT(180 85)|POINT(-175 90)
+ <#1320>
+ #1320.geog.1|MULTIPOLYGON|4326
++NOTICE:  One or more columns in the following table(s) do not have statistics: a
+ #1320.geom.1|MULTIPOLYGON|4326
+ ERROR:  Geometry type (Polygon) does not match column type (MultiPolygon)
+ ERROR:  Geometry type (Polygon) does not match column type (MultiPolygon)
+ #1320.geog.2|MULTIPOLYGON|4326
++NOTICE:  One or more columns in the following table(s) do not have statistics: a
+ #1320.geom.2|MULTIPOLYGON|4326
+ ERROR:  Geometry type (Polygon) does not match column type (MultiPolygon)
+ ERROR:  Geometry type (Polygon) does not match column type (MultiPolygon)
+ #1320.geog.3|MULTIPOLYGON|4326
++NOTICE:  One or more columns in the following table(s) do not have statistics: a
+ #1320.geom.3|MULTIPOLYGON|4326
+ </#1320>
+ #1344|25
 @@ -193,7 +192,7 @@ ERROR:  MultiSurface cannot contain MultiPoint element at character 8
  #852.2|1|t|t
  #852.2|2|t|t
  #1489|MULTIPOINT EMPTY|0|MULTILINESTRING EMPTY|0|MULTIPOLYGON EMPTY|0|GEOMETRYCOLLECTION EMPTY|0
--ERROR:  AddToPROJ4SRSCache: could not parse proj4 string '' 
+-ERROR:  AddToPROJ4SRSCache: could not parse proj4 string ''
 +ERROR:  AddToPROJ4SRSCache: could not parse proj4 string ''
  #1038|
  #1042|2
  #1170|90
+@@ -214,8 +217,11 @@ #1596.7|0
+ #1596|Point[BGS]
+ #1695|MULTIPOLYGON EMPTY
++NOTICE:  One or more columns in the following table(s) do not have statistics: eg
+ #1697.1|0
++NOTICE:  One or more columns in the following table(s) do not have statistics: eg
+ #1697.2|0
++NOTICE:  One or more columns in the following table(s) do not have statistics: eg
+ #1697.3|1024
+ #1734.1|1026
+ #1755|01e9030000000000000040554000000000008041400000000000000000
 @@ -253,8 +252,8 @@ ERROR:  invalid GML representation
  #2424|MULTILINESTRING((0 0,10 0,24 3,30 10))
  #2427|POINT(-1 0)
@@ -13721,18 +13749,18 @@ index afd47e6..9c96064 100644
 --- a/postgis/build/postgis-2.1.5/regress/wmsservers.sql
 +++ b/postgis/build/postgis-2.1.5/regress/wmsservers.sql
 @@ -23,12 +23,12 @@ SELECT 'Geoserver6', "id",substr(encode(ST_AsBinary(ST_Force_2d("pt"),'XDR'),'ba
- 
+
  -- MapServer 5.4 tests
  select 'MapServer1', attname from pg_attribute, pg_constraint, pg_class where pg_constraint.conrelid = pg_class.oid and pg_class.oid = pg_attribute.attrelid and pg_constraint.contype = 'p' and pg_constraint.conkey[1] = pg_attribute.attnum and pg_class.relname = 'wmstest' and pg_table_is_visible(pg_class.oid) and pg_constraint.conkey[2] is null;
 -select 'MapServer2', "id",substr(encode(ST_AsBinary(ST_Force_collection(ST_Force_2d("pt")),'NDR'),'base64'),0,16) as geom,"id" from wmstest where pt && ST_GeomFromText('POLYGON((-98.5 32,-98.5 39,-91.5 39,-91.5 32,-98.5 32))',find_srid('','wmstest','pt'));
 +select 'MapServer2', "id",substr(encode(ST_AsBinary(ST_Force_collection(ST_Force_2d("pt")),'NDR'),'base64'),0,16) as geom,"id" from wmstest where pt && ST_GeomFromText('POLYGON((-98.5 32,-98.5 39,-91.5 39,-91.5 32,-98.5 32))',find_srid('','wmstest','pt')) order by id;
- 
+
  -- MapServer 5.6 tests
  select * from wmstest where false limit 0;
  select 'MapServer3', attname from pg_attribute, pg_constraint, pg_class where pg_constraint.conrelid = pg_class.oid and pg_class.oid = pg_attribute.attrelid and pg_constraint.contype = 'p' and pg_constraint.conkey[1] = pg_attribute.attnum and pg_class.relname = 'wmstest' and pg_table_is_visible(pg_class.oid) and pg_constraint.conkey[2] is null;
 -select 'MapServer4', "id",substr(encode(ST_AsBinary(ST_Force_collection(ST_Force_2d("pt")),'NDR'),'hex'),0,16) as geom,"id" from wmstest where pt && ST_GeomFromText('POLYGON((-98.5 32,-98.5 39,-91.5 39,-91.5 32,-98.5 32))',find_srid('','wmstest','pt'));
 +select 'MapServer4', "id",substr(encode(ST_AsBinary(ST_Force_collection(ST_Force_2d("pt")),'NDR'),'hex'),0,16) as geom,"id" from wmstest where pt && ST_GeomFromText('POLYGON((-98.5 32,-98.5 39,-91.5 39,-91.5 32,-98.5 32))',find_srid('','wmstest','pt')) order by id;
- 
+
  -- Drop the data table
  SELECT 'Removing the data table...';
 diff --git a/postgis/build/postgis-2.1.5/utils/create_undef.pl b/postgis/build/postgis-2.1.5/utils/create_undef.pl
@@ -13768,5 +13796,458 @@ index 7ec6568..19eeaab 100755
  	print "DROP OPERATOR CLASS $opc;\n";
 -	print "DROP OPERATOR FAMILY $opc;\n";
  }
- 
+
  print "-- Drop all operators.\n";
+diff --git a/postgis/build/postgis-2.1.5/regress/sql-mm-multisurface.sql b/postgis/build/postgis-2.1.5/regress/sql-mm-multisurface.sql
+index 3e8ac29..b8809dc 100644
+--- a/postgis/build/postgis-2.1.5/regress/sql-mm-multisurface.sql
++++ b/postgis/build/postgis-2.1.5/regress/sql-mm-multisurface.sql
+@@ -1,4 +1,5 @@
+ -- Repeat these tests with the new function names.
++SET client_min_messages TO WARNING;
+ SELECT 'ndims01', ST_ndims(ST_geomfromewkt('MULTISURFACE(CURVEPOLYGON(CIRCULARSTRING(
+                 -2 0 0 0,
+                 -1 -1 1 2,
+@@ -210,7 +211,7 @@ UPDATE public.multisurface
+                 4 11 4,
+                 7 8 7)))')
+         WHERE id = 1;
+-UPDATE public.multisurface
++UPDATE public.multisurface
+         SET the_geom_3dm = ST_geomfromewkt('MULTISURFACEM(CURVEPOLYGON(CIRCULARSTRING(
+                 -2 0 0,
+                 -1 -1 2,
+@@ -348,4 +349,4 @@ SELECT DropGeometryColumn('public', 'multisurface', 'the_geom_3dm');
+ SELECT DropGeometryColumn('public', 'multisurface', 'the_geom_3dz');
+ SELECT DropGeometryColumn('public', 'multisurface', 'the_geom_4d');
+ DROP TABLE public.multisurface;
+-
++SET client_min_messages TO NOTICE;
+diff --git a/postgis/build/postgis-2.1.5/regress/sql-mm-multicurve.sql b/postgis/build/postgis-2.1.5/regress/sql-mm-multicurve.sql
+index 044631c..1520291 100644
+--- a/postgis/build/postgis-2.1.5/regress/sql-mm-multicurve.sql
++++ b/postgis/build/postgis-2.1.5/regress/sql-mm-multicurve.sql
+@@ -1,12 +1,13 @@
+ -- Repeat the tests with the new function names.
++SET client_min_messages TO WARNING;
+ SELECT 'ndims01', ST_ndims(ST_geomfromewkt('MULTICURVE((
+                 5 5 1 3,
+                 3 5 2 2,
+                 3 3 3 1,
+                 0 3 1 1)
+                 ,CIRCULARSTRING(
+-                0 0 0 0,
+-                0.26794919243112270647255365849413 1 3 -2,
++                0 0 0 0,
++                0.26794919243112270647255365849413 1 3 -2,
+                 0.5857864376269049511983112757903 1.4142135623730950488016887242097 1 2))'));
+ SELECT 'geometrytype01', geometrytype(ST_geomfromewkt('MULTICURVE((
+                 5 5 1 3,
+@@ -14,8 +15,8 @@ SELECT 'geometrytype01', geometrytype(ST_geomfromewkt('MULTICURVE((
+                 3 3 3 1,
+                 0 3 1 1)
+                 ,CIRCULARSTRING(
+-                0 0 0 0,
+-                0.26794919243112270647255365849413 1 3 -2,
++                0 0 0 0,
++                0.26794919243112270647255365849413 1 3 -2,
+                 0.5857864376269049511983112757903 1.4142135623730950488016887242097 1 2))'));
+ SELECT 'ndims02', ST_ndims(ST_geomfromewkt('MULTICURVE((
+                 5 5 1,
+@@ -23,8 +24,8 @@ SELECT 'ndims02', ST_ndims(ST_geomfromewkt('MULTICURVE((
+                 3 3 3,
+                 0 3 1)
+                 ,CIRCULARSTRING(
+-                0 0 0,
+-                0.26794919243112270647255365849413 1 3,
++                0 0 0,
++                0.26794919243112270647255365849413 1 3,
+                 0.5857864376269049511983112757903 1.4142135623730950488016887242097 1))'));
+ SELECT 'geometrytype02', geometrytype(ST_geomfromewkt('MULTICURVE((
+                 5 5 1,
+@@ -32,8 +33,8 @@ SELECT 'geometrytype02', geometrytype(ST_geomfromewkt('MULTICURVE((
+                 3 3 3,
+                 0 3 1)
+                 ,CIRCULARSTRING(
+-                0 0 0,
+-                0.26794919243112270647255365849413 1 3,
++                0 0 0,
++                0.26794919243112270647255365849413 1 3,
+                 0.5857864376269049511983112757903 1.4142135623730950488016887242097 1))'));
+ SELECT 'ndims03', ST_ndims(ST_geomfromewkt('MULTICURVEM((
+                 5 5 3,
+@@ -41,8 +42,8 @@ SELECT 'ndims03', ST_ndims(ST_geomfromewkt('MULTICURVEM((
+                 3 3 1,
+                 0 3 1)
+                 ,CIRCULARSTRING(
+-                0 0 0,
+-                0.26794919243112270647255365849413 1 -2,
++                0 0 0,
++                0.26794919243112270647255365849413 1 -2,
+                 0.5857864376269049511983112757903 1.4142135623730950488016887242097 2))'));
+ SELECT 'geometrytype03', geometrytype(ST_geomfromewkt('MULTICURVEM((
+                 5 5 3,
+@@ -50,8 +51,8 @@ SELECT 'geometrytype03', geometrytype(ST_geomfromewkt('MULTICURVEM((
+                 3 3 1,
+                 0 3 1)
+                 ,CIRCULARSTRING(
+-                0 0 0,
+-                0.26794919243112270647255365849413 1 -2,
++                0 0 0,
++                0.26794919243112270647255365849413 1 -2,
+                 0.5857864376269049511983112757903 1.4142135623730950488016887242097 2))'));
+ SELECT 'ndims04', ST_ndims(ST_geomfromewkt('MULTICURVE((
+                 5 5,
+@@ -59,8 +60,8 @@ SELECT 'ndims04', ST_ndims(ST_geomfromewkt('MULTICURVE((
+                 3 3,
+                 0 3)
+                 ,CIRCULARSTRING(
+-                0 0,
+-                0.26794919243112270647255365849413 1,
++                0 0,
++                0.26794919243112270647255365849413 1,
+                 0.5857864376269049511983112757903 1.4142135623730950488016887242097))'));
+ SELECT 'geometrytype04', geometrytype(ST_geomfromewkt('MULTICURVE((
+                 5 5,
+@@ -68,8 +69,8 @@ SELECT 'geometrytype04', geometrytype(ST_geomfromewkt('MULTICURVE((
+                 3 3,
+                 0 3)
+                 ,CIRCULARSTRING(
+-                0 0,
+-                0.26794919243112270647255365849413 1,
++                0 0,
++                0.26794919243112270647255365849413 1,
+                 0.5857864376269049511983112757903 1.4142135623730950488016887242097))'));
+
+ CREATE TABLE public.multicurve (id INTEGER, description VARCHAR,
+@@ -90,8 +91,8 @@ UPDATE public.multicurve
+                 3 3 3 1,
+                 0 3 1 1)
+                 ,CIRCULARSTRING(
+-                0 0 0 0,
+-                0.26794919243112270647255365849413 1 3 -2,
++                0 0 0 0,
++                0.26794919243112270647255365849413 1 3 -2,
+                 0.5857864376269049511983112757903 1.4142135623730950488016887242097 1 2))');
+ UPDATE public.multicurve
+         SET the_geom_3dz = ST_Geomfromewkt('MULTICURVE((
+@@ -100,18 +101,18 @@ UPDATE public.multicurve
+                 3 3 3,
+                 0 3 1)
+                 ,CIRCULARSTRING(
+-                0 0 0,
+-                0.26794919243112270647255365849413 1 3,
++                0 0 0,
++                0.26794919243112270647255365849413 1 3,
+                 0.5857864376269049511983112757903 1.4142135623730950488016887242097 1))');
+-UPDATE public.multicurve
++UPDATE public.multicurve
+         SET the_geom_3dm = ST_Geomfromewkt('MULTICURVEM((
+                 5 5 3,
+                 3 5 2,
+                 3 3 1,
+                 0 3 1)
+                 ,CIRCULARSTRING(
+-                0 0 0,
+-                0.26794919243112270647255365849413 1 -2,
++                0 0 0,
++                0.26794919243112270647255365849413 1 -2,
+                 0.5857864376269049511983112757903 1.4142135623730950488016887242097 2))');
+ UPDATE public.multicurve
+         SET the_geom_2d = ST_Geomfromewkt('MULTICURVE((
+@@ -120,8 +121,8 @@ UPDATE public.multicurve
+                 3 3,
+                 0 3)
+                 ,CIRCULARSTRING(
+-                0 0,
+-                0.26794919243112270647255365849413 1,
++                0 0,
++                0.26794919243112270647255365849413 1,
+                 0.5857864376269049511983112757903 1.4142135623730950488016887242097))');
+
+ -- These tests will fail on different architectures
+@@ -233,4 +234,5 @@ SELECT DropGeometryColumn('public', 'multicurve', 'the_geom_3dm');
+ SELECT DropGeometryColumn('public', 'multicurve', 'the_geom_3dz');
+ SELECT DropGeometryColumn('public', 'multicurve', 'the_geom_4d');
+ DROP TABLE public.multicurve;
++SET client_min_messages TO NOTICE;
+diff --git a/postgis/build/postgis-2.1.5/regress/regress.sql b/postgis/build/postgis-2.1.5/regress/regress.sql
+index fbefa13..6c1be41 100644
+--- a/postgis/build/postgis-2.1.5/regress/regress.sql
++++ b/postgis/build/postgis-2.1.5/regress/regress.sql
+@@ -5,6 +5,7 @@
+ --- assume datatypes already defined
+
+
++SET client_min_messages TO WARNING;
+
+ --- basic datatypes (correct)
+
+@@ -155,14 +156,14 @@ select '95','MULTIPOINT(0 0, 1 1)'::GEOMETRY && 'MULTIPOINT(1.0001 0, 2 2)'::GEO
+ select '96','MULTIPOINT(0 0, 1 1)'::GEOMETRY && 'MULTIPOINT(0 1, 1 2)'::GEOMETRY as bool;
+ select '97','MULTIPOINT(0 0, 1 1)'::GEOMETRY && 'MULTIPOINT(0 1.0001, 1 2)'::GEOMETRY as bool;
+
+---- contains
++--- contains
+
+ select '98','MULTIPOINT(0 0, 10 10)'::GEOMETRY ~ 'MULTIPOINT(5 5, 7 7)'::GEOMETRY as bool;
+ select '99','MULTIPOINT(5 5, 7 7)'::GEOMETRY ~ 'MULTIPOINT(0 0, 10 10)'::GEOMETRY as bool;
+ select '100','MULTIPOINT(0 0, 7 7)'::GEOMETRY ~ 'MULTIPOINT(0 0, 10 10)'::GEOMETRY as bool;
+ select '101','MULTIPOINT(-0.0001 0, 7 7)'::GEOMETRY ~ 'MULTIPOINT(0 0, 10 10)'::GEOMETRY as bool;
+
+---- contained by
++--- contained by
+
+ select '102','MULTIPOINT(0 0, 10 10)'::GEOMETRY @ 'MULTIPOINT(5 5, 7 7)'::GEOMETRY as bool;
+ select '103','MULTIPOINT(5 5, 7 7)'::GEOMETRY @ 'MULTIPOINT(0 0, 10 10)'::GEOMETRY as bool;
+@@ -201,7 +202,7 @@ create table TEST(a GEOMETRY, b GEOMETRY);
+ \i regress_biginsert.sql
+
+
+----test basic ops on this
++---test basic ops on this
+
+ select '121',box3d(a) as box3d_a, box3d(b) as box3d_b from TEST;
+
+@@ -212,7 +213,7 @@ select '125',a &>b from TEST;
+
+ select '126',a ~= b from TEST;
+ select '127',a @ b from TEST;
+-select '128',a ~ b from TEST;
++select '128',a ~ b from TEST;
+
+ select '129', ST_mem_size(PostGIS_DropBBOX(a)), ST_mem_size(PostGIS_DropBBOX(b)) from TEST;
+
+@@ -283,3 +284,5 @@ select '181', ST_AsText('GEOMETRYCOLLECTION(TRIANGLE EMPTY,TIN EMPTY)');
+
+ -- Drop test table
+ DROP table test;
++
++SET client_min_messages TO NOTICE;
+\ No newline at end of file
+diff --git a/postgis/build/postgis-2.1.5/regress/sql-mm-compoundcurve.sql b/postgis/build/postgis-2.1.5/regress/sql-mm-compoundcurve.sql
+index d5cd6b1..dce5cf2 100644
+--- a/postgis/build/postgis-2.1.5/regress/sql-mm-compoundcurve.sql
++++ b/postgis/build/postgis-2.1.5/regress/sql-mm-compoundcurve.sql
+@@ -1,55 +1,57 @@
++
++SET client_min_messages TO WARNING;
+ SELECT 'ndims01', ST_NDims(ST_Geomfromewkt('COMPOUNDCURVE(CIRCULARSTRING(
+-                0 0 0 0,
+-                0.26794919243112270647255365849413 1 3 -2,
++                0 0 0 0,
++                0.26794919243112270647255365849413 1 3 -2,
+                 0.5857864376269049511983112757903 1.4142135623730950488016887242097 1 2),
+                 (0.5857864376269049511983112757903 1.4142135623730950488016887242097 1 2,
+                 2 0 0 0,
+                 0 0 0 0))'));
+ SELECT 'geometrytype01', geometrytype(ST_Geomfromewkt('COMPOUNDCURVE(CIRCULARSTRING(
+-                0 0 0 0,
+-                0.26794919243112270647255365849413 1 3 -2,
++                0 0 0 0,
++                0.26794919243112270647255365849413 1 3 -2,
+                 0.5857864376269049511983112757903 1.4142135623730950488016887242097 1 2),
+                 (0.5857864376269049511983112757903 1.4142135623730950488016887242097 1 2,
+                 2 0 0 0,
+                 0 0 0 0))'));
+ SELECT 'ndims02', ST_NDims(ST_Geomfromewkt('COMPOUNDCURVE(CIRCULARSTRING(
+-                0 0 0,
+-                0.26794919243112270647255365849413 1 3,
++                0 0 0,
++                0.26794919243112270647255365849413 1 3,
+                 0.5857864376269049511983112757903 1.4142135623730950488016887242097 1),
+                 (0.5857864376269049511983112757903 1.4142135623730950488016887242097 1,
+                 2 0 0,
+                 0 0 0))'));
+ SELECT 'geometrytype02', geometrytype(ST_Geomfromewkt('COMPOUNDCURVE(CIRCULARSTRING(
+-                0 0 0,
+-                0.26794919243112270647255365849413 1 3,
++                0 0 0,
++                0.26794919243112270647255365849413 1 3,
+                 0.5857864376269049511983112757903 1.4142135623730950488016887242097 1),
+                 (0.5857864376269049511983112757903 1.4142135623730950488016887242097 1,
+                 2 0 0,
+                 0 0 0))'));
+ SELECT 'ndims03', ST_NDims(ST_Geomfromewkt('COMPOUNDCURVEM(CIRCULARSTRING(
+-                0 0 0,
+-                0.26794919243112270647255365849413 1 -2,
++                0 0 0,
++                0.26794919243112270647255365849413 1 -2,
+                 0.5857864376269049511983112757903 1.4142135623730950488016887242097 2),
+                 (0.5857864376269049511983112757903 1.4142135623730950488016887242097 2,
+                 2 0 0,
+                 0 0 0))'));
+ SELECT 'geometrytype03', geometrytype(ST_Geomfromewkt('COMPOUNDCURVEM(CIRCULARSTRING(
+-                0 0 0,
+-                0.26794919243112270647255365849413 1 -2,
++                0 0 0,
++                0.26794919243112270647255365849413 1 -2,
+                 0.5857864376269049511983112757903 1.4142135623730950488016887242097 2),
+                 (0.5857864376269049511983112757903 1.4142135623730950488016887242097 2,
+                 2 0 0,
+                 0 0 0))'));
+ SELECT 'ndims04', ST_NDims(ST_Geomfromewkt('COMPOUNDCURVE(CIRCULARSTRING(
+-                0 0,
+-                0.26794919243112270647255365849413 1,
++                0 0,
++                0.26794919243112270647255365849413 1,
+                 0.5857864376269049511983112757903 1.4142135623730950488016887242097),
+                 (0.5857864376269049511983112757903 1.4142135623730950488016887242097,
+                 2 0,
+                 0 0))'));
+ SELECT 'geometrytype04', geometrytype(ST_Geomfromewkt('COMPOUNDCURVE(CIRCULARSTRING(
+-                0 0,
+-                0.26794919243112270647255365849413 1,
++                0 0,
++                0.26794919243112270647255365849413 1,
+                 0.5857864376269049511983112757903 1.4142135623730950488016887242097),
+                 (0.5857864376269049511983112757903 1.4142135623730950488016887242097,
+                 2 0,
+@@ -57,57 +59,57 @@ SELECT 'geometrytype04', geometrytype(ST_Geomfromewkt('COMPOUNDCURVE(CIRCULARSTR
+
+ -- Repeat tests with new function names.
+ SELECT 'ndims01', ST_NDims(ST_geomfromewkt('COMPOUNDCURVE(CIRCULARSTRING(
+-                0 0 0 0,
+-                0.26794919243112270647255365849413 1 3 -2,
++                0 0 0 0,
++                0.26794919243112270647255365849413 1 3 -2,
+                 0.5857864376269049511983112757903 1.4142135623730950488016887242097 1 2),
+                 (0.5857864376269049511983112757903 1.4142135623730950488016887242097 1 2,
+                 2 0 0 0,
+                 0 0 0 0))'));
+ SELECT 'geometrytype01', geometrytype(ST_geomfromewkt('COMPOUNDCURVE(CIRCULARSTRING(
+-                0 0 0 0,
+-                0.26794919243112270647255365849413 1 3 -2,
++                0 0 0 0,
++                0.26794919243112270647255365849413 1 3 -2,
+                 0.5857864376269049511983112757903 1.4142135623730950488016887242097 1 2),
+                 (0.5857864376269049511983112757903 1.4142135623730950488016887242097 1 2,
+                 2 0 0 0,
+                 0 0 0 0))'));
+ SELECT 'ndims02', ST_NDims(ST_geomfromewkt('COMPOUNDCURVE(CIRCULARSTRING(
+-                0 0 0,
+-                0.26794919243112270647255365849413 1 3,
++                0 0 0,
++                0.26794919243112270647255365849413 1 3,
+                 0.5857864376269049511983112757903 1.4142135623730950488016887242097 1),
+                 (0.5857864376269049511983112757903 1.4142135623730950488016887242097 1,
+                 2 0 0,
+                 0 0 0))'));
+ SELECT 'geometrytype02', geometrytype(ST_geomfromewkt('COMPOUNDCURVE(CIRCULARSTRING(
+-                0 0 0,
+-                0.26794919243112270647255365849413 1 3,
++                0 0 0,
++                0.26794919243112270647255365849413 1 3,
+                 0.5857864376269049511983112757903 1.4142135623730950488016887242097 1),
+                 (0.5857864376269049511983112757903 1.4142135623730950488016887242097 1,
+                 2 0 0,
+                 0 0 0))'));
+ SELECT 'ndims03', ST_NDims(ST_geomfromewkt('COMPOUNDCURVEM(CIRCULARSTRING(
+-                0 0 0,
+-                0.26794919243112270647255365849413 1 -2,
++                0 0 0,
++                0.26794919243112270647255365849413 1 -2,
+                 0.5857864376269049511983112757903 1.4142135623730950488016887242097 2),
+                 (0.5857864376269049511983112757903 1.4142135623730950488016887242097 2,
+                 2 0 0,
+                 0 0 0))'));
+ SELECT 'geometrytype03', geometrytype(ST_geomfromewkt('COMPOUNDCURVEM(CIRCULARSTRING(
+-                0 0 0,
+-                0.26794919243112270647255365849413 1 -2,
++                0 0 0,
++                0.26794919243112270647255365849413 1 -2,
+                 0.5857864376269049511983112757903 1.4142135623730950488016887242097 2),
+                 (0.5857864376269049511983112757903 1.4142135623730950488016887242097 2,
+                 2 0 0,
+                 0 0 0))'));
+ SELECT 'ndims04', ST_NDims(ST_geomfromewkt('COMPOUNDCURVE(CIRCULARSTRING(
+-                0 0,
+-                0.26794919243112270647255365849413 1,
++                0 0,
++                0.26794919243112270647255365849413 1,
+                 0.5857864376269049511983112757903 1.4142135623730950488016887242097),
+                 (0.5857864376269049511983112757903 1.4142135623730950488016887242097,
+                 2 0,
+                 0 0))'));
+ SELECT 'geometrytype04', geometrytype(ST_geomfromewkt('COMPOUNDCURVE(CIRCULARSTRING(
+-                0 0,
+-                0.26794919243112270647255365849413 1,
++                0 0,
++                0.26794919243112270647255365849413 1,
+                 0.5857864376269049511983112757903 1.4142135623730950488016887242097),
+                 (0.5857864376269049511983112757903 1.4142135623730950488016887242097,
+                 2 0,
+@@ -128,32 +130,32 @@ INSERT INTO public.compoundcurve (
+                 'compoundcurve');
+ UPDATE public.compoundcurve
+                 SET the_geom_4d = ST_Geomfromewkt('COMPOUNDCURVE(CIRCULARSTRING(
+-                        0 0 0 0,
+-                        0.26794919243112270647255365849413 1 3 -2,
++                        0 0 0 0,
++                        0.26794919243112270647255365849413 1 3 -2,
+                         0.5857864376269049511983112757903 1.4142135623730950488016887242097 1 2),
+                         (0.5857864376269049511983112757903 1.4142135623730950488016887242097 1 2,
+                         2 0 0 0,
+                         0 0 0 0))');
+ UPDATE public.compoundcurve
+                 SET the_geom_3dz = ST_Geomfromewkt('COMPOUNDCURVE(CIRCULARSTRING(
+-                        0 0 0,
+-                        0.26794919243112270647255365849413 1 3,
++                        0 0 0,
++                        0.26794919243112270647255365849413 1 3,
+                         0.5857864376269049511983112757903 1.4142135623730950488016887242097 1),
+                         (0.5857864376269049511983112757903 1.4142135623730950488016887242097 1,
+                         2 0 0,
+                         0 0 0))');
+ UPDATE public.compoundcurve
+                 SET the_geom_3dm = ST_Geomfromewkt('COMPOUNDCURVEM(CIRCULARSTRING(
+-                        0 0 0,
+-                        0.26794919243112270647255365849413 1 -2,
++                        0 0 0,
++                        0.26794919243112270647255365849413 1 -2,
+                         0.5857864376269049511983112757903 1.4142135623730950488016887242097 2),
+                         (0.5857864376269049511983112757903 1.4142135623730950488016887242097 2,
+                         2 0 0,
+                         0 0 0))');
+ UPDATE public.compoundcurve
+                 SET the_geom_2d = ST_Geomfromewkt('COMPOUNDCURVE(CIRCULARSTRING(
+-                        0 0,
+-                        0.26794919243112270647255365849413 1,
++                        0 0,
++                        0.26794919243112270647255365849413 1,
+                         0.5857864376269049511983112757903 1.4142135623730950488016887242097),
+                         (0.5857864376269049511983112757903 1.4142135623730950488016887242097,
+                         2 0,
+@@ -322,3 +324,5 @@ SELECT 'minpoints issues - pass', encode(ST_AsBinary(ST_GeomFromText('COMPOUNDCU
+ SELECT 'minpoints issues - fail', ST_GeomFromText('COMPOUNDCURVE(CIRCULARSTRING(0 0,1 1))');
+ SELECT 'minpoints issues - fail', ST_GeomFromText('COMPOUNDCURVE(CIRCULARSTRING(0 0))');
+ SELECT 'minpoints issues - fail', ST_GeomFromText('COMPOUNDCURVE((0 0),(0 0,1 1))');
++
++SET client_min_messages TO NOTICE;
+\ No newline at end of file
+diff --git a/postgis/build/postgis-2.1.5/regress/sql-mm-curvepoly.sql b/postgis/build/postgis-2.1.5/regress/sql-mm-curvepoly.sql
+index 794580a..4266f47 100644
+--- a/postgis/build/postgis-2.1.5/regress/sql-mm-curvepoly.sql
++++ b/postgis/build/postgis-2.1.5/regress/sql-mm-curvepoly.sql
+@@ -1,4 +1,5 @@
+ -- Repeat tests with new function names.
++SET client_min_messages TO WARNING;
+ SELECT 'ndims01', ST_ndims(ST_geomfromewkt('CURVEPOLYGON(CIRCULARSTRING(
+                 -2 0 0 0,
+                 -1 -1 1 2,
+@@ -103,7 +104,7 @@ SELECT 'geometrytype04', geometrytype(ST_geomfromewkt('CURVEPOLYGON(CIRCULARSTRI
+                 1 0,
+                 0 1,
+                 -1 0))'));
+-
++
+ SELECT 'ndims05', ST_Ndims(ST_geomfromewkt('CURVEPOLYGON(
+                 COMPOUNDCURVE(
+                     (5 5 1 0,5 0 1 1,0 0 1 2,0 5 1 3),
+@@ -340,3 +341,5 @@ SELECT 'valid curve 6', encode(ST_AsBinary(ST_GeomFromText('CURVEPOLYGON(COMPOUN
+ SELECT 'valid curve 7', encode(ST_AsBinary(ST_GeomFromText('CURVEPOLYGON(COMPOUNDCURVE(CIRCULARSTRING(0 0,2 0, 2 1, 2 3, 4 3),(4 3, 4 5, 1 4, 0 0)), (1.7 1, 1.4 0.4, 1.7 1) )'),'ndr'),'hex');
+ SELECT 'valid curve 8', encode(ST_AsBinary(ST_GeomFromText('CURVEPOLYGON(COMPOUNDCURVE(CIRCULARSTRING(0 0,2 0, 2 1, 2 3, 4 3),(4 3, 0 0)), CIRCULARSTRING(1.7 1, 1.4 0.4, 1.7 1) )'),'ndr'),'hex');
+ SELECT 'null response', ST_NumPoints(ST_GeomFromEWKT('CURVEPOLYGON(COMPOUNDCURVE(CIRCULARSTRING(0 0,2 0, 2 1, 2 3, 4 3),(4 3, 4 5, 1 4, 0 0)), CIRCULARSTRING(1.7 1, 1.4 0.4, 1.7 1) )'));
++
++SET client_min_messages TO NOTICE;
+\ No newline at end of file

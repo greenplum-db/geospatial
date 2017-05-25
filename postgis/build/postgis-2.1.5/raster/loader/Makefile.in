@@ -27,15 +27,9 @@
 # the DESTDIR variable so we can get the correct install paths.
 # Hence we include the PGXS Makefile here, but ensure that we override the
 # 'all' and 'install' targets with the ones we really want to use below.
-ifdef USE_PGXS
 PG_CONFIG = @PG_CONFIG@
 PGXS := @PGXS@
 include $(PGXS)
-else
-top_builddir= $(shell cd $(BLD_TOP)/.. && pwd)
-include $(top_builddir)/src/Makefile.global
-include $(top_builddir)/contrib/contrib-global.mk
-endif
 
 # Set CFLAGS after PGXS, otherwise it will get overwritten with the PGXS
 # version which is not what we want. 
@@ -57,7 +51,7 @@ LIBGDAL_LDFLAGS=@LIBGDAL_LDFLAGS@
 LIBGDAL_DEPLIBS_LDFLAGS=@LIBGDAL_DEPLIBS_LDFLAGS@
 PROJ_CFLAGS=@PROJ_CPPFLAGS@
 GEOS_CFLAGS=@GEOS_CPPFLAGS@
-GEOS_LDFLAGS=@GEOS_LDFLAGS@ -lgeos_c -lgeos
+GEOS_LDFLAGS=@GEOS_LDFLAGS@ -lgeos_c
 
 RTCORE_CFLAGS=-I$(RT_CORE)
 RTCORE_LDFLAGS=$(RT_CORE)/librtcore.a

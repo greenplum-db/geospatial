@@ -108,15 +108,9 @@ EXTRA_CLEAN=$(SQL_OBJS) \
 	postgis_upgrade_21_minor.sql 
 
 # PGXS information
-ifdef USE_PGXS
-PG_CONFIG = @PG_CONFIG@
+PG_CONFIG = @PG_CONFIG@ 
 PGXS := @PGXS@
 include $(PGXS)
-else
-top_builddir= $(shell cd $(BLD_TOP)/.. && pwd)
-include $(top_builddir)/src/Makefile.global
-include $(top_builddir)/contrib/contrib-global.mk
-endif
 
 # Set PERL _after_ the include of PGXS
 PERL=@PERL@

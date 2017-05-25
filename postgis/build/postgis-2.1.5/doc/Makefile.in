@@ -75,21 +75,6 @@ DBLATEX=@DBLATEX@
 # Imagemagick's convert utility program for generated images used in the documentation
 IMAGEMAGICK=@IMAGEMAGICK@
 
-# Directories for postgresql subdirectories
-ifdef USE_PGXS
-PG_CONFIG = @PGCONFIG@
-PGSQL_DOCDIR = $(shell $(PG_CONFIG) --docdir)
-PGSQL_MANDIR = $(shell $(PG_CONFIG) --mandir)
-PGSQL_SHAREDIR = $(shell $(PG_CONFIG) --sharedir)
-else
-top_builddir= $(shell cd $(BLD_TOP)/.. && pwd)
-include $(top_builddir)/src/Makefile.global
-include $(top_builddir)/contrib/contrib-global.mk
-PGSQL_DOCDIR = $(docdir)
-PGSQL_MANDIR = $(mandir)
-PGSQL_SHAREDIR = $(datadir)
-endif
-
 # Gettext for translated documentation
 MSGMERGE=msgmerge
 
