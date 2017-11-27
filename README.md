@@ -1,17 +1,10 @@
 # geospatial repo
+PostGIS 2.1.5 for GreenPlum 5.x+
 
-## licence
+## Licence
+This project is developed under GPL v2, because PostGIS is GPL v2.
 
-This project is developing under GPL v2, because PostGIS is GPL v2.
-
-## sub-directories under planing
-1. postgis
-  * geometry
-  * raster
-2. trajectory
-3. utilities
-
-## how to compile it
+## How to compile it
 To compile geospatial form source code, please install the follow third-party
 libraries first by following README.libs.
 For normal use without raster, please install json-c, geos and proj.4
@@ -19,57 +12,56 @@ To enbale raster function, plese install gdal and expat. The minimum version
 requirments are listed in Makefile.version.
 
 Before setup the geospatial, please make sure the GPDB is installed correctly.
-To configure the geospatial, please use following command:
+To compile and install geospatial, use following command:
+
 ```
-./configure --with-pgconfig="Your gpdb location"/bin/pg_config --with-raster
---without-topology --prefix=$GPHOME
+./configure --with-pgconfig="Your gpdb location"/bin/pg_config --with-raster --without-topology --prefix=$GPHOME
+make
+make install	
 ```
 
-If configuration is successfully, then please run _make_ to compile the geospatial
-and run make install to install the geospatial to the GPDB. If you build from
-the extended PostGIS-2.x directory, you may compile with following command:
+If you build from
+the extended PostGIS-2.x directory, you may compile with the following command:
+
 ```
 make USE_PGXS=1 clean all install
 ```
+
 Here USE_PGXS will specify the correct install path to gpdb.
 
+## How to use it
+After installing geospatial extention, run the following commands to enable it:
 
-## how to distribute it
-The geospatial has bulit-in function to build the geospatial as a gppkg to allow
-user to install the geospatial directly into GPDB without compiling.
-
-To build the gppkg, please make sure the source code of GPDB is downloaded and
-```make sync_tools``` is run correctly.
-
-After this, go to _package_ folder and run ./build.sh or following command to build the gppkg
-automaticly.
-```
-make BLD_TARGETS="gppkg" \
-	BLD_ARCH="rhel5_x86_64" \
-	BLD_TOP="Your_gpdb_source_location/gpAux" \
-	INSTLOC="Your_gpdb_installation_location/" \
-	gppkg
-```
-
-## how to use it
-After you installed geospatial extention, run following commands to enable it:
 ```
 psql -d mydatabase -f ${GPHOME}/share/postgresql/contrib/postgis-2.1/postgis.sql
 psql -d mydatabase -f ${GPHOME}/share/postgresql/contrib/postgis-2.1/postgis_comments.sql
-psql -d mydatabase -f ${GPHOME}/share/postgresql/contrib/postgis-2.1/spatial_ref_sys.sql
 psql -d mydatabase -f ${GPHOME}/share/postgresql/contrib/postgis-2.1/rtpostgis.sql
 psql -d mydatabase -f ${GPHOME}/share/postgresql/contrib/postgis-2.1/raster_comments.sql
 ```
-Besides, to configure raster utilities, please set following variables into env of both
-master and segments, and restart the databases.
+
+Besides, to configure raster utilities, please set following variables into env of both master and segments. A suggested way to do this is to add those variable settings into your `$GPHOME/greenplum_path.sh` file to ensure they get set in all the segments. After setting them, restart the database.
+
 ```
 export GDAL_DATA=$GPHOME/share/gdal
 export POSTGIS_ENABLE_OUTDB_RASTERS=0
 export POSTGIS_GDAL_ENABLED_DRIVERS=DISABLE_ALL
 ```
 
-In near future we plan to move them in GUCs after we backport necessary features
-onto gpdb repo.
+Note: by default, all the gdal drivers are disabled. To enable specific types of gdal driver, please refer to this [postgis manual](http://postgis.net/docs/manual-2.1/postgis_installation.html#install_short_version). An example can be like this:
 
-## last update date
-	Kuien Liu, Haozhou Wawng, 26 May 2016
+```
+POSTGIS_GDAL_ENABLED_DRIVERS="GTiff PNG JPEG GIF XYZ"
+```
+
+In near future we plan to move them in GUCs after we backport necessary features onto gpdb repo.
+
+## Sub-directories under planing
+1. postgis
+  * geometry
+  * raster
+2. trajectory
+3. utilities
+
+## Last update date
+Jingyi Mei, Nov 27th, 2017	
+Kuien Liu, Haozhou Wawng, 26 May 2016
