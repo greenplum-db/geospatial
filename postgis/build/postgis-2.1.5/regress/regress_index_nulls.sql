@@ -9,23 +9,19 @@ DROP TABLE "test";
 -- Test node splits in geometry and geography with null-filled, empty-filled, and mixed collections of rows
 -- Previous issues showed crashing behaviour, so if we don't crash, we're golden.
 
--- This is a flaky test on current gpdb5X_STABLE, hence we temporarily commented it out.
--- We plan to uncomment it once the issue is resolved.
--- -- Mixed null/empty on geography
--- drop table if exists indexnulls;
--- create table indexnulls (g geography, id integer);
--- create index nulls_gix on indexnulls using gist (g);
--- insert into indexnulls (id, g) with n as ( select null::geography as p ), e as (select 'point(0 0)'::geography as p), a as (select * from n union all select * from e) select generate_series as id, p as g from generate_series(1,1000),a order by generate_series;
--- drop table indexnulls;
+-- Mixed null/empty on geography
+drop table if exists indexnulls;
+create table indexnulls (g geography, id integer);
+create index nulls_gix on indexnulls using gist (g);
+insert into indexnulls (id, g) with n as ( select null::geography as p ), e as (select 'point(0 0)'::geography as p), a as (select * from n union all select * from e) select generate_series as id, p as g from generate_series(1,1000),a order by generate_series;
+drop table indexnulls;
 
--- This is a flaky test on current gpdb5X_STABLE, hence we temporarily commented it out.
--- We plan to uncomment it once the issue is resolved.
--- -- Mixed null/empty on geometry
--- drop table if exists indexnulls;
--- create table indexnulls (g geometry, id integer);
--- create index nulls_gix on indexnulls using gist (g);
--- insert into indexnulls (id, g) with n as ( select null::geometry as p ), e as (select 'point(0 0)'::geometry as p), a as (select * from n union all select * from e) select generate_series as id, p as g from generate_series(1,1000),a order by generate_series;
--- drop table indexnulls;
+-- Mixed null/empty on geometry
+drop table if exists indexnulls;
+create table indexnulls (g geometry, id integer);
+create index nulls_gix on indexnulls using gist (g);
+insert into indexnulls (id, g) with n as ( select null::geometry as p ), e as (select 'point(0 0)'::geometry as p), a as (select * from n union all select * from e) select generate_series as id, p as g from generate_series(1,1000),a order by generate_series;
+drop table indexnulls;
 
 -- All empty on geometry
 drop table if exists indexempty;

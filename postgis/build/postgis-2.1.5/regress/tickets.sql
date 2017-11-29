@@ -380,9 +380,7 @@ SELECT '#695';
 SELECT ST_RemovePoint('POINT(-11.1111111 40)'::geometry, 1);
 
 -- #696 --
--- This is a flaky test on current gpdb5X_STABLE, hence we temporarily commented it out.
--- We plan to uncomment it once the issue is resolved.
--- SELECT '#696', encode(ST_AsEWKB(ST_Segmentize(ST_GeomFromEWKT('PolyhedralSurface( ((0 0 0, 0 0 1, 0 1 1, 0 1 0, 0 0 0)), ((0 0 0, 0 1 0, 1 1 0, 1 0 0, 0 0 0)), ((0 0 0, 1 0 0, 1 0 1, 0 0 1, 0 0 0)), ((1 1 0, 1 1 1, 1 0 1, 1 0 0, 1 1 0)), ((0 1 0, 0 1 1, 1 1 1, 1 1 0, 0 1 0)), ((0 0 1, 1 0 1, 1 1 1, 0 1 1, 0 0 1)) )'), 0.5),'ndr'),'hex');
+SELECT '#696', encode(ST_AsEWKB(ST_Segmentize(ST_GeomFromEWKT('PolyhedralSurface( ((0 0 0, 0 0 1, 0 1 1, 0 1 0, 0 0 0)), ((0 0 0, 0 1 0, 1 1 0, 1 0 0, 0 0 0)), ((0 0 0, 1 0 0, 1 0 1, 0 0 1, 0 0 0)), ((1 1 0, 1 1 1, 1 0 1, 1 0 0, 1 1 0)), ((0 1 0, 0 1 1, 1 1 1, 1 1 0, 0 1 0)), ((0 0 1, 1 0 1, 1 1 1, 0 1 1, 0 0 1)) )'), 0.5),'ndr'),'hex');
 
 -- #720 --
 SELECT '#720', ST_AsText(ST_SnapTogrid(ST_Transform(ST_GeomFromText('MULTIPOINT(-10 40,-10 55,-10 70,5 40,5 55,5 70,20 40,20 55,20 70,35 40,35 55,35 70,50 40,50 55,50 70)',4326), 3395), 0.01));
@@ -696,9 +694,7 @@ SELECT '#1734.1', count(*) FROM eg;
 DROP table eg;
 
 -- #1755 --
--- This is a flaky test on current gpdb5X_STABLE, hence we temporarily commented it out.
--- We plan to uncomment it once the issue is resolved.
--- select '#1755', encode(ST_AsBinary(ST_GeographyFromText('SRID=4326;Point(85 35 0)'),'ndr'),'hex');
+select '#1755', encode(ST_AsBinary(ST_GeographyFromText('SRID=4326;Point(85 35 0)'),'ndr'),'hex');
 
 -- #1776 --
 with inp as ( SELECT
