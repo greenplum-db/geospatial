@@ -20,7 +20,7 @@ make USE_PGXS=1 clean all install
 
 Here USE_PGXS will specify the correct install path to gpdb.
 
-Note that if psql is in path, there is no need to use --use-pgconfig flag.
+Note that if psql is in path, there is no need to use --with-pgconfig flag.
 
 ## How to use it
 After installing geospatial extension, run the following commands to enable it:
