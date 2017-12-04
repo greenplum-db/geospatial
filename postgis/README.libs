@@ -11,7 +11,7 @@
 
 3. sudo yum install -y proj-devel
 
-4. sudo yum install -y expact
+4. sudo yum install -y expat
 5. sudo yum install -y CUnit CUnit-devel
 
 5. install gdal 1.11.1:
