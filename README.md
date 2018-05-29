@@ -45,8 +45,22 @@ Note: to guarantee that `make check` test cases run correctly, all the gdal driv
 ```
 POSTGIS_GDAL_ENABLED_DRIVERS="GTiff PNG JPEG GIF XYZ"
 ```
-
 In near future we plan to create GUCs for these variables after we backport necessary features into the gpdb repository.
+
+## Workaround for missing .so files
+
+If any of the third party libraries are not installed in the default system path, you may see this issue while running the postgis.sql file
+```sql
+psql -d mydatabase -f ${GPHOME}/share/postgresql/contrib/postgis-2.1/postgis.sql
+postgis-2.1.so": libgeos_c.so.1: cannot open shared object file: No such file or directory
+```
+
+This may happen because `postgis.so` cannot find one or more of the third party .so files to link against. Here is a workaround
+
+```
+1. Edit /etc/ld.so.conf and add all the non default library paths that are used by geospatial
+1. Run ldconfig
+```
 
 ## Sub-directories under planing
 1. postgis
