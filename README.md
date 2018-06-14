@@ -57,10 +57,15 @@ postgis-2.1.so": libgeos_c.so.1: cannot open shared object file: No such file or
 
 This may happen because `postgis.so` cannot find one or more of the third party .so files to link against. Here is a workaround
 
+1. Edit /etc/ld.so.conf and add all the non default library paths that are used by geospatial.
+
+For e.g. if you compiled and installed `proj` in /tmp/proj-install, this is how
+   /etc/ld.so.conf would look like
 ```
-1. Edit /etc/ld.so.conf and add all the non default library paths that are used by geospatial
-1. Run ldconfig
+   include ld.so.conf.d/*.conf
+   /tmp/proj-install/lib
 ```
+2. Run ldconfig
 
 ## Sub-directories under planing
 1. postgis
