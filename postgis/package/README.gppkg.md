@@ -8,8 +8,8 @@ To build postgis gppkg, we first need to download the third-party libraries from
 lvy repo by using make sync_tools provided by gpdb.
 
 Usage:
-	- 1. located to gpdb/gpAux folder
-	- 2. run make sync_tools [BLD_ARCH="rhel5_x86_64"]
+- 1. located to gpdb/gpAux folder
+- 2. run make sync_tools [BLD_ARCH="rhel5_x86_64"]
 
 Below lines should be contained within file 'gpdb/gpAux/releng/make/dependencies/ivy.xml'.
 ```xml
