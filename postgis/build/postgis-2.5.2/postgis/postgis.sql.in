@@ -1924,7 +1924,7 @@ CREATE TABLE spatial_ref_sys (
 	 auth_srid integer,
 	 srtext varchar(2048),
 	 proj4text varchar(2048)
-);
+) DISTRIBUTED REPLICATED;
 
 -----------------------------------------------------------------------
 -- POPULATE_GEOMETRY_COLUMNS()
