@@ -938,6 +938,7 @@ Datum RASTER_nMapAlgebra(PG_FUNCTION_ARGS)
 				i = 1;
 			break;
 			}
+			break;
 		default:
 			i = 0;
 			break;
@@ -4696,7 +4697,7 @@ Datum RASTER_mapAlgebraExpr(PG_FUNCTION_ARGS)
         initexpr = (char *)palloc(len + 1);
 
         strncpy(initexpr, "SELECT (", strlen("SELECT ("));
-        strncpy(initexpr + strlen("SELECT ("), expression, strlen(expression));
+        memcpy(initexpr + strlen("SELECT ("), expression, strlen(expression));
 				strncpy(initexpr + strlen("SELECT (") + strlen(expression), ")::double precision", strlen(")::double precision"));
         initexpr[len] = '\0';
 
@@ -6827,7 +6828,7 @@ Datum RASTER_mapAlgebra2(PG_FUNCTION_ARGS)
 					}
 
 					strncpy(sql, "SELECT (", strlen("SELECT ("));
-					strncpy(sql + strlen("SELECT ("), expr, strlen(expr));
+					memcpy(sql + strlen("SELECT ("), expr, strlen(expr));
 					strncpy(sql + strlen("SELECT (") + strlen(expr), ")::double precision", strlen(")::double precision"));
 					sql[len] = '\0';
 
