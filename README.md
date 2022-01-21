@@ -14,6 +14,7 @@ To compile and install geospatial, use following command:
 
 ```
 cd postgis/build/postgis-2.5.4/
+./autogen.sh
 ./configure --with-pgconfig=$GPHOME/bin/pg_config --with-raster --without-topology --prefix=$GPHOME
 make USE_PGXS=1 clean all install
 ```
