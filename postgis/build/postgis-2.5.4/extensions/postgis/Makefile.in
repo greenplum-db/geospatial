@@ -81,10 +81,10 @@ sql/$(EXTENSION)--$(EXTVERSION).sql: sql/$(EXTENSION).sql | sql
 
 sql/$(EXTENSION)--unpackaged--$(EXTVERSION).sql: $(EXTENSION_UNPACKAGED_UPGRADE_SCRIPTS) sql/$(EXTENSION)--ANY--$(EXTVERSION).sql ../../utils/create_unpackaged.pl Makefile | sql
 	# Ensure version is correct
-	cat sql/$(EXTENSION)--ANY--$(EXTVERSION).sql > $@
 	cat $(EXTENSION_UNPACKAGED_UPGRADE_SCRIPTS) \
 		| $(PERL) ../../utils/create_unpackaged.pl postgis \
-		>> $@
+		> $@
+	cat sql/$(EXTENSION)--ANY--$(EXTVERSION).sql >> $@
 
 unpackaged_check.sql: unpackaged_check.sql.in Makefile
 	cat $< \
