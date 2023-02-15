@@ -1797,7 +1797,7 @@ compute_gserialized_stats_mode(VacAttrStats *stats, AnalyzeAttrFetchFunc fetchfu
 	stats->stanumbers[stats_slot] = (float4*)nd_stats;
 	stats->numnumbers[stats_slot] = nd_stats_size/sizeof(float4);
 	stats->stanullfrac = (float4)null_cnt/sample_rows;
-	stats->stawidth = total_width/notnull_cnt;
+	stats->stawidth = (total_width + stats->totalwidelength) / (double) (notnull_cnt + stats->widerow_num);
 	stats->stadistinct = -1.0;
 	stats->stats_valid = true;
 
