@@ -2484,14 +2484,42 @@ Datum LWGEOM_setpoint_linestring(PG_FUNCTION_ARGS)
 PG_FUNCTION_INFO_V1(LWGEOM_asEWKT);
 Datum LWGEOM_asEWKT(PG_FUNCTION_ARGS)
 {
-	GSERIALIZED *geom = PG_GETARG_GSERIALIZED_P(0);
-	LWGEOM *lwgeom = lwgeom_from_gserialized(geom);
+	// FIXME: This function and many others are updated for varlena performance in pgis 3.1.
+	// https://github.com/postgis/postgis/commit/0696fa46699875fe43708d78602244fd6f257ee4
+	// The new version crashes GPDB7 at the PG_RETURN_TEXT_P step.
+	// Reverting back to the old code for now.
 
-	int precision = OUT_DEFAULT_DECIMAL_DIGITS;
-	if (PG_NARGS() > 1)
-		precision = PG_GETARG_INT32(1);
+	// GSERIALIZED *geom = PG_GETARG_GSERIALIZED_P(0);
+	// LWGEOM *lwgeom = lwgeom_from_gserialized(geom);
 
-	PG_RETURN_TEXT_P(lwgeom_to_wkt_varlena(lwgeom, WKT_EXTENDED, precision));
+	// int precision = OUT_DEFAULT_DECIMAL_DIGITS;
+	// if (PG_NARGS() > 1)
+	// 	precision = PG_GETARG_INT32(1);
+
+	// PG_RETURN_TEXT_P(lwgeom_to_wkt_varlena(lwgeom, WKT_EXTENDED, precision));
+
+	GSERIALIZED *geom;
+	LWGEOM *lwgeom;
+	char *wkt;
+	size_t wkt_size;
+	text *result;
+
+	POSTGIS_DEBUG(2, "LWGEOM_asEWKT called.");
+
+	geom = PG_GETARG_GSERIALIZED_P(0);
+	lwgeom = lwgeom_from_gserialized(geom);
+
+	/* Write to WKT and free the geometry */
+	wkt = lwgeom_to_wkt(lwgeom, WKT_EXTENDED, DBL_DIG, &wkt_size);
+	lwgeom_free(lwgeom);
+
+	/* Write to text and free the WKT */
+	result = cstring_to_text(wkt);
+	pfree(wkt);
+
+	/* Return the text */
+	PG_FREE_IF_COPY(geom, 0);
+	PG_RETURN_TEXT_P(result);
 }
 
 /**
