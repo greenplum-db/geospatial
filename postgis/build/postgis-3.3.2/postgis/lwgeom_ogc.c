@@ -824,13 +824,45 @@ Datum LWGEOM_from_WKB(PG_FUNCTION_ARGS)
 PG_FUNCTION_INFO_V1(LWGEOM_asText);
 Datum LWGEOM_asText(PG_FUNCTION_ARGS)
 {
-	GSERIALIZED *geom = PG_GETARG_GSERIALIZED_P(0);
-	LWGEOM *lwgeom = lwgeom_from_gserialized(geom);
+	// FIXME: This function and many others are updated for varlena performance in pgis 3.1.
+	// https://github.com/postgis/postgis/commit/0696fa46699875fe43708d78602244fd6f257ee4
+	// The new version crashes GPDB7 at the PG_RETURN_TEXT_P step.
+	// Reverting back to the old code for now.
 
-	int dbl_dig_for_wkt = OUT_DEFAULT_DECIMAL_DIGITS;
+	// GSERIALIZED *geom = PG_GETARG_GSERIALIZED_P(0);
+	// LWGEOM *lwgeom = lwgeom_from_gserialized(geom);
+
+	// int dbl_dig_for_wkt = OUT_DEFAULT_DECIMAL_DIGITS;
+	// if (PG_NARGS() > 1) dbl_dig_for_wkt = PG_GETARG_INT32(1);
+
+	// PG_RETURN_TEXT_P(lwgeom_to_wkt_varlena(lwgeom, WKT_ISO, dbl_dig_for_wkt));
+
+	GSERIALIZED *geom;
+	LWGEOM *lwgeom;
+	char *wkt;
+	size_t wkt_size;
+	text *result;
+	int dbl_dig_for_wkt = DBL_DIG;
+
+	POSTGIS_DEBUG(2, "Called.");
+
+	geom = PG_GETARG_GSERIALIZED_P(0);
+	lwgeom = lwgeom_from_gserialized(geom);
+
 	if (PG_NARGS() > 1) dbl_dig_for_wkt = PG_GETARG_INT32(1);
 
-	PG_RETURN_TEXT_P(lwgeom_to_wkt_varlena(lwgeom, WKT_ISO, dbl_dig_for_wkt));
+	/* Write to WKT and free the geometry */
+	wkt = lwgeom_to_wkt(lwgeom, WKT_ISO, dbl_dig_for_wkt, &wkt_size);
+	lwgeom_free(lwgeom);
+	POSTGIS_DEBUGF(3, "WKT size = %u, WKT length = %u", (unsigned int)wkt_size, (unsigned int)strlen(wkt));
+
+	/* Write to text and free the WKT */
+	result = cstring_to_text(wkt);
+	lwfree(wkt);
+
+	/* Return the text */
+	PG_FREE_IF_COPY(geom, 0);
+	PG_RETURN_TEXT_P(result);
 }
 
 
