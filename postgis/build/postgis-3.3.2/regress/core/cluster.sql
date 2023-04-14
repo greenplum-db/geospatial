@@ -1,4 +1,5 @@
 -- tests for ST_ClusterIntersecting and ST_ClusterWithin
+set client_min_messages to error;
 
 CREATE TEMPORARY TABLE cluster_inputs (id int, geom geometry) DISTRIBUTED BY (id);
 INSERT INTO cluster_inputs VALUES
@@ -9,6 +10,7 @@ INSERT INTO cluster_inputs VALUES
 (5, 'LINESTRING (6 6, 7 7)'),
 (6, 'POLYGON EMPTY'),
 (7, 'POLYGON ((0 0, 4 0, 4 4, 0 4, 0 0))');
+reset client_min_messages;
 
 SELECT 't1', ST_AsText(unnest(ST_ClusterIntersecting(geom ORDER BY id))) FROM cluster_inputs;
 SELECT 't2', ST_AsText(unnest(ST_ClusterIntersecting(array_agg(geom ORDER BY id)))) FROM cluster_inputs;
