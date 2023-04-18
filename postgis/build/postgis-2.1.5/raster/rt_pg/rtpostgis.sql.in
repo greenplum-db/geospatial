@@ -7715,7 +7715,7 @@ CREATE OR REPLACE FUNCTION AddRasterConstraints (
 
 						-- Greenplum doesn't support EXCLUSION CONSTRAINT (exclude)
 						--	so spatially unique is not supportted up to now, 28 Jan 2015
-						RAISE EXCEPTION 'Unable to add constraint: %, because Greenplum doesn\'t support exclusion constraint (EXCLUDE), so spatially unique constraints will be ignored. Skipping', quote_literal(constraints[x]);
+						RAISE EXCEPTION 'Unable to add constraint: %, because Greenplum does not support exclusion constraint (EXCLUDE), so spatially unique constraints will be ignored. Skipping', quote_literal(constraints[x]);
 						rtn := FLASE;
 						CONTINUE kwloop;
 					ELSIF kw IN ('num_bands', 'numbands') THEN

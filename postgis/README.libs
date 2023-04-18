@@ -1,32 +1,23 @@
 # Step 0
-#
+# 
 # make sure you have epel.repo under /etc/yum.repo.d/
 # otherwise you cannot find geos/gdal/proj4 from yum
 
 # Step 1
 
-1. sudo yum install json-c-devel -y
+1. sudo yum install -y json-c-devel
 
-Installed:
-  json-c-devel.x86_64 0:0.11-4.el7_0
-
-
-2. sudo yum install geos-devel -y
-
-Installed:
-  geos-devel.x86_64 0:3.4.2-2.el7
-
-Dependency Installed:
-  geos.x86_64 0:3.4.2-2.el7
+2. sudo yum install -y geos-devel
 
 3. sudo yum install -y proj-devel
 
-Installed:
-  proj-devel.x86_64 0:4.8.0-4.el7
+4. sudo yum install -y expat
+5. sudo yum install -y CUnit CUnit-devel
 
-  Dependency Installed:
-    proj.x86_64 0:4.8.0-4.el7
-
-4. gdal
-
-5. expat
+5. install gdal 1.11.1:
+   wget http://download.osgeo.org/gdal/1.11.1/gdal-1.11.1.tar.gz
+   tar zxf gdal-1.11.1.tar.gz
+   cd gdal-1.11.1
+   ./configure --prefix=$GPHOME (or other place you want, default is /usr/local)
+   make
+   make install

@@ -1,13 +1,15 @@
 Notes for generating gppkg with pre-compiled libraries
 
-1. Download 3rd party libraries
+### 1. Download 3rd party libraries
+
 ======================================
 
 To build postgis gppkg, we first need to download the third-party libraries from
 lvy repo by using make sync_tools provided by gpdb.
+
 Usage:
-	1. located to gpdb/gpAux folder
-	2. run make sync_tools [BLD_ARCH="rhel5_x86_64"]
+-  located to gpdb/gpAux folder
+-  run make sync_tools [BLD_ARCH="rhel5_x86_64"]
 
 Below lines should be contained within file 'gpdb/gpAux/releng/make/dependencies/ivy.xml'.
 ```xml
@@ -19,7 +21,8 @@ Below lines should be contained within file 'gpdb/gpAux/releng/make/dependencies
       <dependency org="expat"                 name="libexpat"  rev="2.1.0"          conf="rhel5_x86_64->rhel5_x86_64;suse10_x86_64->suse10_x86_64" />
 ```
 
-2. Compile postgis gppkg
+### 2. Compile postgis gppkg
+
 ======================================
 
 After downloaded libraries, go to package folder. And run make BLD_TARGETS="gppkg"
@@ -46,7 +49,8 @@ To clean it, run:
 	make BLD_TOP="/home/gpadmin/workspace/gpdb/gpAux" clean
 ```
 
-3. Verification and installation
+### 3. Verification and installation
+
 ======================================
 
 run belowing command to verify postgis.gppkg is ready.

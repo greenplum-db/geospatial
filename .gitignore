@@ -1,5 +1,5 @@
 # utilies not focused currently
-utility
+# utility
 
 # Global excludes across all subdirectories
 *.o

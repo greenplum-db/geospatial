@@ -1,8 +1,8 @@
-Summary:        Geos library 
-License:        LGPL        
+Summary:        Geos library
+License:        LGPL
 Name:           geos
 Version:        %{geos_ver}
-Release:        %{geos_rel} 
+Release:        %{geos_rel}
 Group:          Development/Tools
 Prefix:         /temp
 AutoReq:        no

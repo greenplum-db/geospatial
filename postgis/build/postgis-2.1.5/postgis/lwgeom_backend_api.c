@@ -15,6 +15,7 @@
 #include "postgres.h"
 #include "fmgr.h"
 #include "../liblwgeom/liblwgeom.h"
+#include "sqldefines.h"
 
 /* for custom variables */
 #include "utils/guc.h"
@@ -96,14 +97,28 @@ static void lwgeom_backend_switch( const char* newvalue, bool doit, GucSource so
 
 void lwgeom_init_backend()
 {
+#if POSTGIS_PGSQL_VERSION >= 91
     DefineCustomStringVariable( "postgis.backend", /* name */
 				"Sets the PostGIS Geometry Backend.", /* short_desc */
 				"Sets the PostGIS Geometry Backend (allowed values are 'geos' or 'sfcgal')", /* long_desc */
 				&lwgeom_backend_name, /* valueAddr */
+				(char *)lwgeom_backends[0].name,
 				PGC_USERSET, /* GucContext context */
+				0, /* int flags */
+				NULL, /* GucStringCheckHook check_hook */
 				(GucStringAssignHook)lwgeom_backend_switch, /* GucStringAssignHook assign_hook */
 				NULL  /* GucShowHook show_hook */
 				);
+#else
+    DefineCustomStringVariable( "postgis.backend", /* name */
+        "Sets the PostGIS Geometry Backend.", /* short_desc */
+        "Sets the PostGIS Geometry Backend (allowed values are 'geos' or 'sfcgal')", /* long_desc */
+        &lwgeom_backend_name, /* valueAddr */
+        PGC_USERSET, /* GucContext context */
+        (GucStringAssignHook)lwgeom_backend_switch, /* GucStringAssignHook assign_hook */
+        NULL  /* GucShowHook show_hook */
+        );
+#endif
 }
 
 PG_FUNCTION_INFO_V1(intersects);
@@ -161,9 +176,9 @@ Datum intersects3d_dwithin(PG_FUNCTION_ARGS)
 	elog(ERROR,"Operation on two GEOMETRIES with different SRIDs\n");
 	PG_RETURN_NULL();
     }
-    
+
     mindist = lwgeom_mindistance3d_tolerance(lwgeom1,lwgeom2,0.0);
-    
+
     PG_FREE_IF_COPY(geom1, 0);
     PG_FREE_IF_COPY(geom2, 1);
     /*empty geometries cases should be right handled since return from underlying

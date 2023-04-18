@@ -8,7 +8,7 @@ Prefix:         /temp
 AutoReq:        no
 AutoProv:       no
 Provides:       postgis = %{postgis_ver}
-Requires:       geos = %{geos_ver}, proj = %{proj_ver}, json-c = %{json_ver}, gdal = %{gdal_ver}
+Requires: geos = %{geos_ver}, proj = %{proj_ver}, json-c = %{json_ver}, gdal = %{gdal_ver}
 
 %description
 The PostGIS module provides geospatial extensions for Greenplum Database.
@@ -40,6 +40,9 @@ cp $GPHOME/share/postgresql/contrib/postgis-2.1/rtpostgis_legacy.sql %{buildroot
 cp $GPHOME/share/postgresql/contrib/postgis-2.1/uninstall*.sql %{buildroot}/temp/share/postgresql/contrib/postgis-2.1/uninstall/
 
 cp %{postgis_dir}/../../package/postgis_manager.sh %{buildroot}/temp/share/postgresql/contrib/postgis-2.1/postgis_manager.sh
+cp %{postgis_dir}/../../package/postgis_replace_views.sql %{buildroot}/temp/share/postgresql/contrib/postgis-2.1/postgis_replace_views.sql
+
+cp %{postgis_dir}/../../package/postgis_enable_operators.sql %{buildroot}/temp/share/postgresql/contrib/postgis-2.1/postgis_enable_operators.sql
 
 %files
 /temp/bin/pgsql2shp
@@ -53,6 +56,8 @@ cp %{postgis_dir}/../../package/postgis_manager.sh %{buildroot}/temp/share/postg
 /temp/lib/postgresql/postgis-2.1.so
 /temp/lib/postgresql/rtpostgis-2.1.so
 /temp/share/postgresql/contrib/postgis-2.1/postgis_manager.sh
+/temp/share/postgresql/contrib/postgis-2.1/postgis_replace_views.sql
+/temp/share/postgresql/contrib/postgis-2.1/postgis_enable_operators.sql
 /temp/share/postgresql/contrib/postgis-2.1/install/postgis.sql
 /temp/share/postgresql/contrib/postgis-2.1/install/postgis_comments.sql
 /temp/share/postgresql/contrib/postgis-2.1/install/raster_comments.sql

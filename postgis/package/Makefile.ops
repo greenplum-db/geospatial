@@ -3,7 +3,7 @@ GPDB_LIB_RELENG_PREFIX=/opt/tools_build/tools/greenplum-db
 POSTGIS_TAR_BALL=/../source/postgis-$(POSTGIS_VER).tar.gz
 POSTGIS_PATCH_FILE=/../patch/postgis-$(POSTGIS_VER)-GPDB.patch
 
-prepare: check_path check_postgis_path remove_la replace_prefix 
+prepare: check_path check_postgis_path remove_la replace_prefix
 
 #check all of paths
 check_path:
@@ -69,4 +69,4 @@ remove_la:
 
 replace_prefix:
 		perl -i.bak -p -e "s|$(GPDB_LIB_RELENG_PREFIX)|${GPHOME}|g" $(GDAL_CONFIG) 2>/dev/null
-	
+

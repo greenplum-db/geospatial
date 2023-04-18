@@ -471,7 +471,9 @@ Datum geometry_distance_spheroid(PG_FUNCTION_ARGS)
 {
 	GSERIALIZED *geom1 = (GSERIALIZED *)PG_DETOAST_DATUM(PG_GETARG_DATUM(0));
 	GSERIALIZED *geom2 = (GSERIALIZED *)PG_DETOAST_DATUM(PG_GETARG_DATUM(1));
-	SPHEROID *sphere = (SPHEROID *)PG_GETARG_POINTER(2);
+	SPHEROID s;
+	SPHEROID *sphere = &s;
+	SPHEROID *sphere_in = (SPHEROID *)PG_GETARG_POINTER(2);
 	int type1 = gserialized_get_type(geom1);
 	int type2 = gserialized_get_type(geom2);
 	bool use_spheroid = PG_GETARG_BOOL(3);
@@ -479,7 +481,7 @@ Datum geometry_distance_spheroid(PG_FUNCTION_ARGS)
 	double distance;
 
 	/* Calculate some other parameters on the spheroid */
-	spheroid_init(sphere, sphere->a, sphere->b);
+	spheroid_init(sphere, sphere_in->a, sphere_in->b);
 
 	/* Catch sphere special case and re-jig spheroid appropriately */
 	if ( ! use_spheroid )
@@ -511,7 +513,7 @@ Datum geometry_distance_spheroid(PG_FUNCTION_ARGS)
 	/* Get #LWGEOM structures */
 	lwgeom1 = lwgeom_from_gserialized(geom1);
 	lwgeom2 = lwgeom_from_gserialized(geom2);
-	
+
 	/* We are going to be calculating geodetic distances */
 	lwgeom_set_geodetic(lwgeom1, LW_TRUE);
 	lwgeom_set_geodetic(lwgeom2, LW_TRUE);
