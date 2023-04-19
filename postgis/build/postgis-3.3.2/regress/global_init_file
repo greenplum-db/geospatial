@@ -1,0 +1,38 @@
+# Local matchsubs
+-- start_matchsubs
+
+# Remove timing
+m/\\timing.*/
+s/\\timing.*//
+
+m/Timing is on\./
+s/Timing is on\.//
+
+m/^Time: \d+.*/
+s/^Time: \d+.*//
+
+m/ERROR:  geometry contains non-closed rings \(lwgeom_pg.c:\d+\) at/
+s/ERROR:  geometry contains non-closed rings \(lwgeom_pg.c:\d+\) at/ERROR:  geometry contains non-closed rings at/
+
+m/ERROR:  parse error - invalid geometry \(lwgeom_pg.c:\d+\)/
+s/ERROR:  parse error - invalid geometry \(lwgeom_pg.c:\d+\)/ERROR:  parse error - invalid geometry/
+
+m/ERROR:  transform_geom: couldn't parse proj4 output string: 'invalid projection': no arguments in initialization list.*/
+s/ERROR:  transform_geom: couldn't parse proj4 output string: 'invalid projection': no arguments in initialization list.*/ERROR:  transform_geom: couldn't parse proj4 output string: 'invalid projection': no arguments in initialization list/
+
+m/ERROR:  Geometry type \(Polygon\) does not match column type \(MultiPolygon\).*\n/
+s/ERROR:  Geometry type \(Polygon\) does not match column type \(MultiPolygon\).*\n//
+
+m/\s*\(seg\d+[^\(]*\)/
+s/\s*\(seg\d+[^\(]*\)//
+
+#m/ \(lwgeom_pg\.c:\d+\)/
+#s/ \(lwgeom_pg\.c:\d+\)//
+
+m/\s*\([^\(]*\.c:\d+\)/
+s/\s*\([^\(]*\.c:\d+\)//
+
+m/WARNING:  autovacuum is not supported in Greenplum\n/
+s/WARNING:  autovacuum is not supported in Greenplum\n//
+
+-- end_matchsubs
