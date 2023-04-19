@@ -1,5 +1,0 @@
-# postgis extension
-comment = 'PostGIS geometry, geography, and raster spatial types and functions'
-default_version = '2.5.4'
-module_pathname = '$libdir/postgis-2.5'
-relocatable = false
