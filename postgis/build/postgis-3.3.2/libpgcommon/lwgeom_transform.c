@@ -33,6 +33,8 @@
 #include <string.h>
 #include <stdio.h>
 
+#include "libsrid.h"
+
 #define maxprojlen  512
 #define spibufferlen 512
 

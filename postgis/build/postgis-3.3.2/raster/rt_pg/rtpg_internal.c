@@ -33,6 +33,7 @@
 #include <executor/spi.h>
 
 #include "rtpg_internal.h"
+#include "libsrid.h"
 
 /* string replacement function taken from
  * http://ubuntuforums.org/showthread.php?s=aa6f015109fd7e4c7e30d2fd8b717497&t=141670&page=3
@@ -310,18 +311,18 @@ LIMIT 1
 */
 
 	/* Greenplum tends to use in-memory hash instead of SPI query */
-//	if (getSRSbySRIDbyRule(srid, true, query) != NULL) {
-//		len = strlen(query) + 1;
-//		srs = SPI_palloc(len);
-//
-//		if (NULL == srs) {
-//			elog(ERROR, "rtpg_getSR: Could not allocate memory for spatial reference text\n");
-//			return NULL;
-//		}
-//
-//		memcpy(srs, query, len);
-//		return srs;
-//	}
+	if (getSRSbySRIDbyRule(srid, true, query) != NULL) {
+		len = strlen(query) + 1;
+		srs = SPI_palloc(len);
+
+		if (NULL == srs) {
+			elog(ERROR, "rtpg_getSR: Could not allocate memory for spatial reference text\n");
+			return NULL;
+		}
+
+		memcpy(srs, query, len);
+		return srs;
+	}
 
 	len = sizeof(char) * (strlen("SELECT CASE WHEN (upper(auth_name) = 'EPSG' OR upper(auth_name) = 'EPSGA') AND length(COALESCE(auth_srid::text, '')) > 0 THEN upper(auth_name) || ':' || auth_srid WHEN length(COALESCE(auth_name, '') || COALESCE(auth_srid::text, '')) > 0 THEN COALESCE(auth_name, '') || COALESCE(auth_srid::text, '') ELSE '' END, proj4text, srtext FROM spatial_ref_sys WHERE srid =  LIMIT 1") + MAX_INT_CHARLEN + 1);
 	sql = (char *) palloc(len);

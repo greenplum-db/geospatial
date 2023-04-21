@@ -29,7 +29,7 @@
 
 #include "lwgeom_cache.h"
 
-
+#include "libsrid.h"
 /*
 * Generic statement caching infrastructure. We cache
 * the following kinds of objects:
@@ -276,6 +276,12 @@ getSRSbySRID(FunctionCallInfo fcinfo, int32_t srid, bool short_crs)
 	int size, err;
 	postgis_initialize_cache();
 
+	if (getSRSbySRIDbyRule(srid, short_crs, query) != NULL) {
+        size = strlen(query) + 1;
+        srscopy = SPI_palloc(size);
+        memcpy(srscopy, query, size);
+        return srscopy;
+    }
 	if (SPI_OK_CONNECT != SPI_connect())
 	{
 		elog(NOTICE, "%s: could not connect to SPI manager", __func__);
@@ -389,6 +395,10 @@ getSRIDbySRS(FunctionCallInfo fcinfo, const char *srs)
 		 "WHERE re[1] ILIKE auth_name AND int4(re[2]) = auth_srid",
 		 postgis_spatial_ref_sys());
 
+	srid = getSRIDbySRSbyRule(srs);
+    if (srid != 0) {
+        return srid;
+    }
 	if (!srs)
 		return 0;
 
