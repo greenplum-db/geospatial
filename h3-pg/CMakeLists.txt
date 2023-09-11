@@ -76,3 +76,17 @@ add_custom_target(pgxn
                       -o h3-${INSTALL_VERSION}.zip HEAD
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 )
+
+set(H3PG_GPPKG "h3-pg.gppkg")
+add_custom_target(gppkg
+  COMMAND mkdir -p gppkg_build/share/postgresql/extension
+  COMMAND mkdir -p gppkg_build/lib/postgresql/
+  COMMAND cp ${PostgreSQL_SHARE_DIR}/extension/h3* gppkg_build/share/postgresql/extension
+  COMMAND cp ${PostgreSQL_LIBRARY_DIR}/postgresql/h3* gppkg_build/lib/postgresql/
+  COMMAND gppkg build
+      -f
+      --input gppkg_build
+      --config cmake/gppkg_spec_v2.yml
+      --output ${H3PG_GPPKG}
+  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+)

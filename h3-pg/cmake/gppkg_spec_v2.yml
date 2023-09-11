@@ -1,0 +1,9 @@
+Format: V2
+Pkgname: h3-pg
+GPDBVersion: 7
+Version: h3-pg-v4.1.2+pivotal.1_gpdb7.0
+Description: H3 package for PostgreSQL and Greenplum 
+PostInstall:
+  Coordinator: |
+      echo "Please run the following commands to enable the PostGIS package:"
+      echo "CREATE EXTENSION h3_postgis CASCADE;"
