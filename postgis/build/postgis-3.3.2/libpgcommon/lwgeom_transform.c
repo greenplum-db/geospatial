@@ -196,14 +196,15 @@ GetProjStringsSPI(int32_t srid)
      *  otherwise we will meet the known issue: cannot access relation from segments.
      *  so we search static hash table firstly to by-pass this issue issue.
      */
-	static int maxproj4len = 512;
-	char *proj4_string = getProj4StringStatic(srid);
-	if (proj4_string != NULL) {
-		strs.proj4text = SPI_pstrdup(proj4_string);
-		SPI_finish();
-		return strs;
-	}
-
+	/* static int maxproj4len = 512;
+	* char *proj4_string = getProj4StringStatic(srid);
+	* if (proj4_string != NULL) {
+	*	strs.proj4text = SPI_pstrdup(proj4_string);
+	*	SPI_finish();
+	*	return strs;
+	* }
+    */
+   
 	static char *proj_str_tmpl =
 	    "SELECT proj4text, auth_name, auth_srid, srtext "
 	    "FROM %s "

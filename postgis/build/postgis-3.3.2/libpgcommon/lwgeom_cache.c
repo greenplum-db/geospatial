@@ -283,13 +283,15 @@ getSRSbySRID(FunctionCallInfo fcinfo, int32_t srid, bool short_crs)
         return NULL;
     }
 
-    if (getSRSbySRIDbyRule(srid, short_crs, query) != NULL) {
-        size = strlen(query) + 1;
-        srscopy = SPI_palloc(size);
-        memcpy(srscopy, query, size);
-        SPI_finish();
-        return srscopy;
-    }
+    /*
+    * if (getSRSbySRIDbyRule(srid, short_crs, query) != NULL) {
+    *   size = strlen(query) + 1;
+    *   srscopy = SPI_palloc(size);
+    *   memcpy(srscopy, query, size);
+    *   SPI_finish();
+    *   return srscopy;
+    *  }
+    */
 
     if (short_crs)
         snprintf(query,
@@ -388,10 +390,11 @@ getSRIDbySRS(FunctionCallInfo fcinfo, const char *srs)
     Datum values[] = {CStringGetDatum(srs)};
     int32_t srid, err;
 
-    srid = getSRIDbySRSbyRule(srs);
-    if (srid != 0) {
-        return srid;
-    }
+    /* srid = getSRIDbySRSbyRule(srs);
+    * if (srid != 0) {
+    *    return srid;
+    * }
+    */
 
     postgis_initialize_cache();
     snprintf(query,
